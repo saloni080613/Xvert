@@ -11,7 +11,7 @@ class Settings:
     
     # File upload settings
     MAX_FILE_SIZE: int = 50 * 1024 * 1024  # 50MB
-    ALLOWED_IMAGE_TYPES: list = ["png", "jpg", "jpeg", "webp", "bmp", "gif"]
+    ALLOWED_IMAGE_TYPES: list = ["png", "jpg", "jpeg", "gif"]  # WebP, BMP excluded
     ALLOWED_DOC_TYPES: list = ["pdf", "docx", "md", "html", "txt"]
     ALLOWED_DATA_TYPES: list = ["json", "csv", "xlsx", "xml"]
 

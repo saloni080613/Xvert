@@ -1,0 +1,46 @@
+"""
+Pydantic Schemas for Image Conversion
+=====================================
+
+These models define the request/response structure for the API.
+
+Pydantic provides:
+1. Data validation - ensures required fields are present
+2. Type coercion - converts strings to proper types
+3. Documentation - auto-generates OpenAPI schema
+"""
+
+from pydantic import BaseModel, Field
+from typing import Optional
+
+
+class ImageConversionRequest(BaseModel):
+    """
+    Request model for image conversion.
+    
+    The actual file comes via multipart form data,
+    but these fields come as form parameters alongside the file.
+    """
+    source_format: Optional[str] = Field(
+        default=None,
+        description="Source format (png, jpg, jpeg, gif). Auto-detected if not provided."
+    )
+    target_format: str = Field(
+        ...,  # Required field
+        description="Target format to convert to (png, jpg, jpeg, gif)"
+    )
+
+
+class ImageConversionResponse(BaseModel):
+    """Response model for image conversion metadata."""
+    success: bool
+    original_format: str
+    converted_format: str
+    original_filename: str
+    converted_filename: str
+    message: str
+
+
+class ErrorResponse(BaseModel):
+    """Error response model."""
+    detail: str

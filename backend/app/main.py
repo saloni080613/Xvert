@@ -35,8 +35,11 @@ async def root():
 async def health_check():
     return {"status": "healthy"}
 
-# Import and include routers (uncomment as you build them)
-# from app.routers import convert, files, share
-# app.include_router(convert.router, prefix="/api/convert", tags=["conversion"])
+# Import and include routers
+from app.routers import convert
+app.include_router(convert.router, prefix="/api/convert", tags=["conversion"])
+
+# Uncomment as you build more routers:
+# from app.routers import files, share
 # app.include_router(files.router, prefix="/api/files", tags=["files"])
 # app.include_router(share.router, prefix="/api/share", tags=["sharing"])
