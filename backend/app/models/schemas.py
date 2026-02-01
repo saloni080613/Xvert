@@ -44,3 +44,19 @@ class ImageConversionResponse(BaseModel):
 class ErrorResponse(BaseModel):
     """Error response model."""
     detail: str
+
+class DocumentConversionRequest(BaseModel):
+    source_format: str = Field(..., description="Source format (docx, pdf, csv, json, etc)")
+    target_format: str = Field(..., description="Target format (pdf, docx, xlsx, csv, etc)")
+    preserve_layout: bool = Field(default=True, description="Attempt to preserve original layout")
+
+class DocumentConversionResponse(BaseModel):
+    success: bool
+    original_format: str
+    converted_format: str
+    original_filename: str
+    converted_filename: str
+    message: str
+
+class ErrorResponse(BaseModel):
+    detail: str

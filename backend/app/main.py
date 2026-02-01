@@ -37,7 +37,12 @@ async def health_check():
 
 # Import and include routers
 from app.routers import convert
+# --- NEW: Import your documents router ---
+from app.routers import documents 
+
 app.include_router(convert.router, prefix="/api/convert", tags=["conversion"])
+# --- NEW: Register the documents router ---
+app.include_router(documents.router, prefix="/api", tags=["documents"])
 
 # Uncomment as you build more routers:
 # from app.routers import files, share
