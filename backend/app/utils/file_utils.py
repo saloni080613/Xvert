@@ -25,6 +25,28 @@ FORMAT_TO_EXTENSION = {
     "gif": ".gif",
 }
 
+# Data format extension mappings
+DATA_EXTENSION_MAP = {
+    ".json": "json",
+    ".csv": "csv",
+    ".xlsx": "xlsx",
+    ".xml": "xml",
+}
+
+DATA_FORMAT_TO_EXTENSION = {
+    "json": ".json",
+    "csv": ".csv",
+    "xlsx": ".xlsx",
+    "xml": ".xml",
+}
+
+DATA_CONTENT_TYPES = {
+    "json": "application/json",
+    "csv": "text/csv",
+    "xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "xml": "application/xml",
+}
+
 
 def get_format_from_filename(filename: str) -> Optional[str]:
     """
@@ -130,3 +152,50 @@ def sanitize_filename(filename: str) -> str:
         sanitized = "converted" + sanitized
     
     return sanitized
+
+
+def get_data_format_from_filename(filename: str) -> Optional[str]:
+    """
+    Extract and validate data format from filename extension.
+    
+    Args:
+        filename: Original filename with extension
+    
+    Returns:
+        Normalized format string (json, csv, xlsx, xml) or None if invalid
+    """
+    if not filename:
+        return None
+    
+    ext = os.path.splitext(filename)[1].lower()
+    return DATA_EXTENSION_MAP.get(ext)
+
+
+def get_data_output_filename(original_filename: str, target_format: str) -> str:
+    """
+    Generate output filename with the new data format extension.
+    
+    Args:
+        original_filename: Original file name
+        target_format: Target format (json, csv, xlsx, xml)
+    
+    Returns:
+        New filename with appropriate extension
+    """
+    base_name = os.path.splitext(original_filename)[0]
+    new_extension = DATA_FORMAT_TO_EXTENSION.get(target_format.lower(), f".{target_format}")
+    return f"{base_name}{new_extension}"
+
+
+def get_data_content_type(format: str) -> str:
+    """
+    Get the HTTP Content-Type header value for a data format.
+    
+    Args:
+        format: Data format (json, csv, xlsx, xml)
+    
+    Returns:
+        MIME type string
+    """
+    return DATA_CONTENT_TYPES.get(format.lower(), "application/octet-stream")
+
