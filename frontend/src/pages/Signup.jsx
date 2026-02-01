@@ -4,6 +4,7 @@ import { Link, useNavigate } from 'react-router-dom'
 
 
 export default function Signup() {
+    // Component for user registration showing Confirm Password and Full Name fields
     const [fullName, setFullName] = useState('')
     const [email, setEmail] = useState('')
     const [password, setPassword] = useState('')
