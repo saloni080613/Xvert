@@ -75,13 +75,16 @@ export default function Login() {
 
                     {error && (
                         <div style={{
-                            backgroundColor: 'rgba(255, 82, 82, 0.2)',
-                            color: '#ff8a80',
+                            backgroundColor: 'rgba(255, 20, 20, 0.25)', // More distinct red background
+                            border: '1px solid rgba(255, 80, 80, 0.5)', // Added border for definition
+                            color: '#FFCDD2', // Lighter, higher contrast text
                             padding: '0.75rem',
                             borderRadius: '4px',
                             marginBottom: '1rem',
-                            fontSize: '0.8rem',
-                            textAlign: 'center'
+                            fontSize: '0.85rem',
+                            fontWeight: '500',
+                            textAlign: 'center',
+                            boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
                         }}>
                             {error}
                         </div>
@@ -184,23 +187,25 @@ export default function Login() {
                         justifyContent: 'space-between',
                         marginTop: '1rem',
                         fontSize: '0.75rem',
-                        color: '#ddd'
+                        color: '#ffffff', // Bright white
+                        textShadow: '0 1px 2px rgba(0,0,0,0.2)'
                     }}>
-                        <Link to="/forgot-password" style={{ color: '#fff', textDecoration: 'none' }}>Forgot Password ?</Link>
-                        <Link to="/signup" style={{ color: '#fff', textDecoration: 'none' }}>Sign Up</Link>
+                        <Link to="/forgot-password" style={{ color: '#ffffff', textDecoration: 'none' }}>Forgot Password ?</Link>
+                        <Link to="/signup" style={{ color: '#ffffff', textDecoration: 'none', fontWeight: 'bold' }}>Sign Up</Link>
                     </div>
 
                     <div style={{
                         display: 'flex',
                         alignItems: 'center',
                         margin: '1.2rem 0',
-                        color: '#ddd',
+                        color: '#ffffff', // Bright white
                         fontSize: '0.7rem',
-                        letterSpacing: '0.5px'
+                        letterSpacing: '0.5px',
+                        textShadow: '0 1px 2px rgba(0,0,0,0.2)'
                     }}>
-                        <div style={{ flex: 1, height: '1px', backgroundColor: 'rgba(255,255,255,0.2)' }}></div>
+                        <div style={{ flex: 1, height: '1px', backgroundColor: 'rgba(255,255,255,0.5)' }}></div>
                         <span style={{ padding: '0 10px', textTransform: 'uppercase' }}>OR LOGIN WITH</span>
-                        <div style={{ flex: 1, height: '1px', backgroundColor: 'rgba(255,255,255,0.2)' }}></div>
+                        <div style={{ flex: 1, height: '1px', backgroundColor: 'rgba(255,255,255,0.5)' }}></div>
                     </div>
 
                     <div style={{ display: 'flex', justifyContent: 'center', gap: '1.5rem' }}>

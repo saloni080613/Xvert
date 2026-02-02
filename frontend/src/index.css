@@ -13,6 +13,17 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* Hide default password toggle in Edge/IE and Chrome */
+input::-ms-reveal,
+input::-ms-clear {
+  display: none;
+}
+
+input[type="password"]::-webkit-password-toggle-button {
+  -webkit-appearance: none;
+  display: none;
+}
+
 a {
   font-weight: 500;
   color: #646cff;
