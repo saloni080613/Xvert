@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { supabase } from '../services/supabase'
+import authService from '../services/AuthService'
 import { Link, useNavigate } from 'react-router-dom'
 
 
@@ -28,15 +28,7 @@ export default function Signup() {
         setError(null)
         setMessage(null)
 
-        const { error } = await supabase.auth.signUp({
-            email,
-            password,
-            options: {
-                data: {
-                    full_name: fullName,
-                },
-            },
-        })
+        const { error } = await authService.signup(email, password, fullName)
 
         if (error) {
             setError(error.message)
