@@ -1,13 +1,18 @@
 import os
-from pydantic_settings import BaseSettings
+from dotenv import load_dotenv
 
-class Settings(BaseSettings):
-    SUPABASE_URL: str
-    SUPABASE_KEY: str
-    RESEND_API_KEY: str = "re_123" # Default or optional
-    FRONTEND_URL: str = "http://localhost:5173"
+load_dotenv()
 
-    class Config:
-        env_file = ".env"
+class Settings:
+    SUPABASE_URL: str = os.getenv("SUPABASE_URL", "")
+    SUPABASE_KEY: str = os.getenv("SUPABASE_KEY", "")
+    RESEND_API_KEY: str = os.getenv("RESEND_API_KEY", "")
+    FRONTEND_URL: str = os.getenv("FRONTEND_URL", "http://localhost:5173")
+    
+    # File upload settings
+    MAX_FILE_SIZE: int = 50 * 1024 * 1024  # 50MB
+    ALLOWED_IMAGE_TYPES: list = ["png", "jpg", "jpeg", "gif"]  # WebP, BMP excluded
+    ALLOWED_DOC_TYPES: list = ["pdf", "docx", "md", "html", "txt"]
+    ALLOWED_DATA_TYPES: list = ["json", "csv", "xlsx", "xml"]
 
 settings = Settings()

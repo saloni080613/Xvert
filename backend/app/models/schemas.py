@@ -1,27 +1,62 @@
-from pydantic import BaseModel
-from typing import Optional, List
-from datetime import datetime
-from uuid import UUID
+"""
+Pydantic Schemas for Image Conversion
+=====================================
 
-class ConversionRequest(BaseModel):
-    format: str
+These models define the request/response structure for the API.
 
-class ConversionResponse(BaseModel):
-    id: UUID
-    status: str
-    download_url: Optional[str] = None
-    message: Optional[str] = None
+Pydantic provides:
+1. Data validation - ensures required fields are present
+2. Type coercion - converts strings to proper types
+3. Documentation - auto-generates OpenAPI schema
+"""
 
-class UserProfile(BaseModel):
-    id: UUID
-    email: str
-    full_name: Optional[str] = None
-    avatar_url: Optional[str] = None
+from pydantic import BaseModel, Field
+from typing import Optional
 
-class ConversionHistory(BaseModel):
-    id: UUID
-    original_filename: str
+
+class ImageConversionRequest(BaseModel):
+    """
+    Request model for image conversion.
+    
+    The actual file comes via multipart form data,
+    but these fields come as form parameters alongside the file.
+    """
+    source_format: Optional[str] = Field(
+        default=None,
+        description="Source format (png, jpg, jpeg, gif). Auto-detected if not provided."
+    )
+    target_format: str = Field(
+        ...,  # Required field
+        description="Target format to convert to (png, jpg, jpeg, gif)"
+    )
+
+
+class ImageConversionResponse(BaseModel):
+    """Response model for image conversion metadata."""
+    success: bool
     original_format: str
     converted_format: str
-    status: str
-    created_at: datetime
+    original_filename: str
+    converted_filename: str
+    message: str
+
+
+class ErrorResponse(BaseModel):
+    """Error response model."""
+    detail: str
+
+class DocumentConversionRequest(BaseModel):
+    source_format: str = Field(..., description="Source format (docx, pdf, csv, json, etc)")
+    target_format: str = Field(..., description="Target format (pdf, docx, xlsx, csv, etc)")
+    preserve_layout: bool = Field(default=True, description="Attempt to preserve original layout")
+
+class DocumentConversionResponse(BaseModel):
+    success: bool
+    original_format: str
+    converted_format: str
+    original_filename: str
+    converted_filename: str
+    message: str
+
+class ErrorResponse(BaseModel):
+    detail: str
