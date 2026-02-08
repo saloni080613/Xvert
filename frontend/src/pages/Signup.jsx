@@ -41,7 +41,7 @@ export default function Signup() {
     return (
         <div style={{
             height: '100vh',
-            width: '100vw',
+            width: '100%',
             backgroundImage: "url('/login_bg_new.png')",
             backgroundSize: 'cover',
             backgroundPosition: 'center',
@@ -338,28 +338,6 @@ export default function Signup() {
                 </div>
             </div>
 
-            <div style={{
-                width: '100vw',
-                padding: '0.8rem 2rem',
-                backgroundColor: '#f5f5f5',
-                borderTop: '1px solid #e0e0e0',
-                display: 'flex',
-                justifyContent: 'flex-end',
-                alignItems: 'center',
-                gap: '2rem',
-                fontSize: '0.7rem',
-                color: '#666',
-                fontFamily: '"Nunito", sans-serif',
-                boxSizing: 'border-box',
-                whiteSpace: 'nowrap',
-                overflowX: 'auto'
-            }}>
-                <span>Copyright © 2025 Xvert. All rights reserved.</span>
-                <span style={{ cursor: 'pointer' }}>Terms of Use</span>
-                <span style={{ cursor: 'pointer' }}>Cookie preferences</span>
-                <span style={{ cursor: 'pointer' }}>Privacy</span>
-                <span style={{ cursor: 'pointer' }}>Do not sell or share my personal information</span>
-            </div>
         </div>
     )
 }
