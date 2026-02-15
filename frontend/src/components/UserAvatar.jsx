@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 
+import { FaUser, FaHistory, FaSignOutAlt } from 'react-icons/fa';
+
 /**
  * MenuItem Class (OOP: Encapsulation of Menu Item Data)
  */
@@ -40,9 +42,9 @@ export default function UserAvatar({ session, onLogout }) {
 
     // Menu Items Definition (OOP: Data and Behavior separation)
     const menuItems = [
-        new MenuItem('Profile', () => navigate('/profile'), '👤'),
-        new MenuItem('History', () => navigate('/history'), '🕒'),
-        new MenuItem('Logout', onLogout, '🚪', true)
+        new MenuItem('Profile', () => navigate('/profile'), <FaUser size={22} />),
+        new MenuItem('History', () => navigate('/history'), <FaHistory size={22} />),
+        new MenuItem('Logout', onLogout, <FaSignOutAlt size={22} />, true)
     ];
 
     const handleItemClick = (item) => {
@@ -102,7 +104,7 @@ export default function UserAvatar({ session, onLogout }) {
                     backgroundColor: '#fff',
                     borderRadius: '12px',
                     boxShadow: '0 10px 25px rgba(0,0,0,0.1)',
-                    width: '200px',
+                    width: '240px',
                     zIndex: 1000,
                     overflow: 'hidden',
                     border: '1px solid #eee',
@@ -113,8 +115,8 @@ export default function UserAvatar({ session, onLogout }) {
                         borderBottom: '1px solid #eee',
                         backgroundColor: '#f9f9f9'
                     }}>
-                        <p style={{ margin: 0, fontWeight: 'bold', color: '#333', fontSize: '0.9rem' }}>Account</p>
-                        <p style={{ margin: 0, fontSize: '0.75rem', color: '#666', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>{userEmail}</p>
+                        <p style={{ margin: 0, fontWeight: 'bold', color: '#1D3557', fontSize: '1rem', marginBottom: '4px' }}>Account</p>
+                        <p style={{ margin: 0, fontSize: '0.9rem', color: '#444', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>{userEmail}</p>
                     </div>
 
                     <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
@@ -133,7 +135,7 @@ export default function UserAvatar({ session, onLogout }) {
                                         alignItems: 'center',
                                         gap: '0.8rem',
                                         color: item.isDanger ? '#D32F2F' : '#333',
-                                        fontSize: '0.95rem',
+                                        fontSize: '1.2rem',
                                         transition: 'background 0.2s'
                                     }}
                                     onMouseOver={(e) => e.currentTarget.style.backgroundColor = item.isDanger ? '#FFEBEE' : '#F5F5F5'}

@@ -49,19 +49,19 @@ export default function ForgotPassword() {
             }}>
                 <div style={{
                     width: '100%',
-                    maxWidth: '260px', // Small square size matching Login
+                    maxWidth: '350px', // Enlarged from 260px
                     backgroundColor: 'rgba(255, 255, 255, 0.1)', // Glass effect
                     backdropFilter: 'blur(20px)',
-                    borderRadius: '20px', // Round edges
-                    padding: '1.5rem',
+                    borderRadius: '24px',
+                    padding: '2.5rem',
                     boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.37)',
-                    border: '1px solid rgba(255, 255, 255, 0.18)',
+                    border: '1px solid rgba(255, 255, 255, 0.2)',
                     color: 'white'
                 }}>
                     <h2 style={{
                         textAlign: 'center',
-                        marginBottom: '1rem',
-                        fontSize: '1.3rem',
+                        marginBottom: '1.5rem',
+                        fontSize: '1.8rem', // Larger heading
                         fontWeight: '600',
                         color: '#fff',
                         fontFamily: '"Outfit", sans-serif'
@@ -111,12 +111,12 @@ export default function ForgotPassword() {
                             placeholder="Enter your email"
                             style={{
                                 width: '100%',
-                                padding: '0.8rem',
-                                borderRadius: '4px',
+                                padding: '1rem',
+                                borderRadius: '8px',
                                 border: 'none',
-                                backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                                backgroundColor: 'rgba(255, 255, 255, 0.15)',
                                 color: 'white',
-                                fontSize: '0.9rem',
+                                fontSize: '1rem',
                                 outline: 'none',
                                 boxSizing: 'border-box'
                             }}
@@ -126,19 +126,19 @@ export default function ForgotPassword() {
                             type="submit"
                             disabled={loading}
                             style={{
-                                marginTop: '0.5rem',
+                                marginTop: '1rem',
                                 width: '100%',
-                                padding: '0.8rem',
-                                borderRadius: '4px',
+                                padding: '1rem',
+                                borderRadius: '8px',
                                 border: 'none',
-                                backgroundColor: '#B0D8F5', // Soft Sky Blue
-                                color: '#1a1a1a', // Dark text
-                                fontSize: '0.85rem',
+                                backgroundColor: '#F0E6D2', // Beige
+                                color: '#1a1a1a',
+                                fontSize: '1rem',
                                 fontWeight: '700',
                                 cursor: 'pointer',
                                 textTransform: 'uppercase',
                                 letterSpacing: '1px',
-                                transition: 'transform 0.2s',
+                                transition: 'all 0.2s',
                                 opacity: loading ? 0.8 : 1
                             }}
                         >
@@ -149,38 +149,18 @@ export default function ForgotPassword() {
                     <div style={{
                         display: 'flex',
                         justifyContent: 'center',
-                        marginTop: '1rem',
-                        fontSize: '0.75rem',
+                        marginTop: '1.8rem',
+                        fontSize: '1.1rem',
                         color: '#ffffff',
-                        textShadow: '0 1px 2px rgba(0,0,0,0.2)'
+                        fontWeight: '800', // Bolder
+                        textShadow: '0 2px 4px rgba(0,0,0,0.6)'
                     }}>
                         <Link to="/login" style={{ color: '#ffffff', textDecoration: 'none', fontWeight: 'bold' }}>Back to Login</Link>
                     </div>
                 </div>
             </div>
 
-            <div style={{
-                width: '100vw',
-                padding: '0.8rem 2rem',
-                backgroundColor: '#f5f5f5',
-                borderTop: '1px solid #e0e0e0',
-                display: 'flex',
-                justifyContent: 'flex-end',
-                alignItems: 'center',
-                gap: '2rem',
-                fontSize: '0.7rem',
-                color: '#666',
-                fontFamily: '"Nunito", sans-serif',
-                boxSizing: 'border-box',
-                whiteSpace: 'nowrap',
-                overflowX: 'auto'
-            }}>
-                <span>Copyright © 2025 Xvert. All rights reserved.</span>
-                <span style={{ cursor: 'pointer' }}>Terms of Use</span>
-                <span style={{ cursor: 'pointer' }}>Cookie preferences</span>
-                <span style={{ cursor: 'pointer' }}>Privacy</span>
-                <span style={{ cursor: 'pointer' }}>Do not sell or share my personal information</span>
-            </div>
+
         </div>
     )
 }

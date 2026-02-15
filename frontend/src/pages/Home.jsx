@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { supabase } from '../services/supabase' // Direct supabase usage for immediate auth state check
+import { supabase } from '../services/supabase'
 import authService from '../services/AuthService'
 import conversionService from '../services/ConversionService'
 import UserAvatar from '../components/UserAvatar'
@@ -10,21 +10,19 @@ import Navbar from '../components/Navbar'
 export default function Home() {
     const navigate = useNavigate()
     const [file, setFile] = useState(null)
-    const [selectedTool, setSelectedTool] = useState(null) // null = show grid, 'tool-id' = show specific tool
+    const [selectedTool, setSelectedTool] = useState(null)
     const [loading, setLoading] = useState(false)
     const [message, setMessage] = useState('')
     const [session, setSession] = useState(null)
-    const [files, setFiles] = useState([]) // For multiple files (Merge PDF)
+    const [files, setFiles] = useState([])
     const [progress, setProgress] = useState(0)
     const [downloadUrl, setDownloadUrl] = useState(null)
 
     useEffect(() => {
-        // Check for active session
         authService.getSession().then(({ data: { session } }) => {
             setSession(session)
         })
 
-        // Listen for auth changes
         const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
             setSession(session)
         })
@@ -34,32 +32,34 @@ export default function Home() {
 
     const tools = [
         // Document Tools
-        { id: 'pdf-to-word', name: 'PDF to Word', desc: 'Convert your PDF files to editable DOCX documents.', icon: '📄', type: 'pdf', target: 'docx' },
-        { id: 'docx-to-pdf', name: 'Word to PDF', desc: 'Convert DOCX files to PDF documents.', icon: '📝', type: 'docx', target: 'pdf' },
-        { id: 'image-to-pdf', name: 'Image to PDF', desc: 'Convert JPG, PNG, or GIF images into PDF documents.', icon: '🖼️', type: 'image', target: 'pdf' },
-        { id: 'merge-pdf', name: 'Merge PDF', desc: 'Combine multiple PDFs into one unified document.', icon: '🔗', type: 'merge', target: 'pdf' },
-        { id: 'pdf-to-jpg', name: 'PDF to JPG', desc: 'Convert PDF pages to JPG images.', icon: 'fz', type: 'pdf', target: 'jpg' },
-        { id: 'pdf-to-png', name: 'PDF to PNG', desc: 'Convert PDF pages to PNG images.', icon: 'fz', type: 'pdf', target: 'png' },
+        { id: 'pdf-to-word', name: 'PDF to Word', desc: 'Convert PDFs to editable DOCX.', icon: '📄', type: 'pdf', target: 'docx' },
+        { id: 'docx-to-pdf', name: 'Word to PDF', desc: 'Convert DOCX files to PDF.', icon: '📝', type: 'docx', target: 'pdf' },
+        { id: 'image-to-pdf', name: 'Image to PDF', desc: 'JPG, PNG, GIF to PDF.', icon: '🖼️', type: 'image', target: 'pdf' },
+        { id: 'merge-pdf', name: 'Merge PDF', desc: 'Combine multiple PDFs into one.', icon: '🔗', type: 'merge', target: 'pdf' },
+        { id: 'pdf-to-jpg', name: 'PDF to JPG', desc: 'Extract PDF pages as JPGs.', icon: 'fz', type: 'pdf', target: 'jpg' },
+        { id: 'pdf-to-png', name: 'PDF to PNG', desc: 'Extract PDF pages as PNGs.', icon: 'fz', type: 'pdf', target: 'png' },
 
         // Image Tools
-        { id: 'jpg-to-png', name: 'JPG to PNG', desc: 'Convert JPG images to PNG format.', icon: '📷', type: 'jpg', target: 'png' },
-        { id: 'png-to-jpg', name: 'PNG to JPG', desc: 'Convert PNG images to JPG format.', icon: '📸', type: 'png', target: 'jpg' },
-        { id: 'jpg-to-gif', name: 'JPG to GIF', desc: 'Convert JPG images to GIF format.', icon: '👾', type: 'jpg', target: 'gif' },
-        { id: 'png-to-gif', name: 'PNG to GIF', desc: 'Convert PNG images to GIF format.', icon: '👾', type: 'png', target: 'gif' },
+        { id: 'jpg-to-png', name: 'JPG to PNG', desc: 'Convert JPG to transparent PNG.', icon: '📷', type: 'jpg', target: 'png' },
+        { id: 'png-to-jpg', name: 'PNG to JPG', desc: 'Convert PNG to standard JPG.', icon: '📸', type: 'png', target: 'jpg' },
+        { id: 'jpg-to-gif', name: 'JPG to GIF', desc: 'Animated GIF from JPGs.', icon: '👾', type: 'jpg', target: 'gif' },
+        { id: 'png-to-gif', name: 'PNG to GIF', desc: 'Animated GIF from PNGs.', icon: '👾', type: 'png', target: 'gif' },
+        { id: 'gif-to-jpg', name: 'GIF to JPG', desc: 'Static JPG from GIF.', icon: '📸', type: 'gif', target: 'jpg' },
+        { id: 'gif-to-png', name: 'GIF to PNG', desc: 'Static PNG from GIF.', icon: '📷', type: 'gif', target: 'png' },
 
         // Data Tools
-        { id: 'json-to-csv', name: 'JSON to CSV', desc: 'Transform JSON data files into CSV spreadsheets.', icon: '📊', type: 'data', target: 'csv' },
-        { id: 'csv-to-json', name: 'CSV to JSON', desc: 'Convert CSV spreadsheets into JSON format.', icon: '📋', type: 'data', target: 'json' },
-        { id: 'excel-to-csv', name: 'Excel to CSV', desc: 'Convert Excel spreadsheets to CSV format.', icon: 'x', type: 'data', target: 'csv' },
-        { id: 'csv-to-excel', name: 'CSV to Excel', desc: 'Convert CSV files to Excel spreadsheets.', icon: 'x', type: 'data', target: 'xlsx' },
-        { id: 'excel-to-json', name: 'Excel to JSON', desc: 'Convert Excel spreadsheets to JSON data.', icon: 'x', type: 'data', target: 'json' },
-        { id: 'json-to-excel', name: 'JSON to Excel', desc: 'Convert JSON data to Excel spreadsheets.', icon: 'x', type: 'data', target: 'xlsx' },
-        { id: 'xml-to-json', name: 'XML to JSON', desc: 'Convert XML data to JSON format.', icon: '📋', type: 'data', target: 'json' },
-        { id: 'json-to-xml', name: 'JSON to XML', desc: 'Convert JSON data to XML format.', icon: '🧩', type: 'data', target: 'xml' },
-        { id: 'xml-to-csv', name: 'XML to CSV', desc: 'Convert XML data to CSV spreadsheets.', icon: '📊', type: 'data', target: 'csv' },
-        { id: 'csv-to-xml', name: 'CSV to XML', desc: 'Convert CSV spreadsheets to XML format.', icon: '🧩', type: 'data', target: 'xml' },
-        { id: 'xml-to-excel', name: 'XML to Excel', desc: 'Convert XML data to Excel spreadsheets.', icon: 'x', type: 'data', target: 'xlsx' },
-        { id: 'excel-to-xml', name: 'Excel to XML', desc: 'Convert Excel spreadsheets to XML format.', icon: '🧩', type: 'data', target: 'xml' },
+        { id: 'json-to-csv', name: 'JSON to CSV', desc: 'Convert JSON data to CSV.', icon: '📊', type: 'data', target: 'csv' },
+        { id: 'csv-to-json', name: 'CSV to JSON', desc: 'Convert CSV rows to JSON.', icon: '📋', type: 'data', target: 'json' },
+        { id: 'excel-to-csv', name: 'Excel to CSV', desc: 'Convert XLSX sheets to CSV.', icon: 'x', type: 'data', target: 'csv' },
+        { id: 'csv-to-excel', name: 'CSV to Excel', desc: 'Convert CSV to Excel XLSX.', icon: 'x', type: 'data', target: 'xlsx' },
+        { id: 'excel-to-json', name: 'Excel to JSON', desc: 'Convert Excel to JSON data.', icon: 'x', type: 'data', target: 'json' },
+        { id: 'json-to-excel', name: 'JSON to Excel', desc: 'Convert JSON to Excel XLSX.', icon: 'x', type: 'data', target: 'xlsx' },
+        { id: 'xml-to-json', name: 'XML to JSON', desc: 'Convert XML to JSON format.', icon: '📋', type: 'data', target: 'json' },
+        { id: 'json-to-xml', name: 'JSON to XML', desc: 'Convert JSON to XML format.', icon: '🧩', type: 'data', target: 'xml' },
+        { id: 'xml-to-csv', name: 'XML to CSV', desc: 'Convert XML to CSV format.', icon: '📊', type: 'data', target: 'csv' },
+        { id: 'csv-to-xml', name: 'CSV to XML', desc: 'Convert CSV to XML format.', icon: '🧩', type: 'data', target: 'xml' },
+        { id: 'xml-to-excel', name: 'XML to Excel', desc: 'Convert XML to Excel XLSX.', icon: 'x', type: 'data', target: 'xlsx' },
+        { id: 'excel-to-xml', name: 'Excel to XML', desc: 'Convert Excel to XML format.', icon: '🧩', type: 'data', target: 'xml' },
     ]
 
     const getAcceptTypes = (tool) => {
@@ -69,6 +69,7 @@ export default function Home() {
         if (tool.type === 'image') return '.jpg,.jpeg,.png,.gif'
         if (tool.type === 'jpg') return '.jpg,.jpeg'
         if (tool.type === 'png') return '.png'
+        if (tool.type === 'gif') return '.gif'
         if (tool.type === 'docx') return '.docx,.doc'
         if (tool.type === 'data') return '.json,.csv,.xlsx,.xls,.xml'
         return '*'
@@ -76,14 +77,12 @@ export default function Home() {
 
     const handleLogout = async () => {
         await authService.logout()
-        // Stay on home page, but session will be null so header updates
     }
 
     const handleFileChange = (e) => {
         setDownloadUrl(null)
         const selectedFile = e.target.files[0];
 
-        // Basic validation helper
         const isValidFileType = (file, tool) => {
             if (!file) return false
             const ext = '.' + file.name.split('.').pop().toLowerCase()
@@ -93,12 +92,10 @@ export default function Home() {
 
         if (selectedTool?.id === 'merge-pdf') {
             const newFiles = Array.from(e.target.files).filter(f => isValidFileType(f, selectedTool))
-
             if (newFiles.length < e.target.files.length) {
                 setMessage('Some files were skipped because they are not PDFs.')
                 setTimeout(() => setMessage(''), 3000)
             }
-
             setFiles(prev => [...prev, ...newFiles])
             setFile(null)
         } else {
@@ -111,7 +108,7 @@ export default function Home() {
             }
             setFiles([])
         }
-        e.target.value = '' // Reset input to allow selecting same files again if needed
+        e.target.value = ''
     }
 
     const handleRemoveFile = (index) => {
@@ -133,15 +130,6 @@ export default function Home() {
     }
 
     const handleConvert = async () => {
-        if (!session) {
-            // Optional: You might want to force login for conversion
-            // validation logic here if needed. 
-            // For now, allowing all users or showing message.
-            // If strict enforcement is needed:
-            // setMessage('Please login to convert files.');
-            // return;
-        }
-
         if (selectedTool.id === 'merge-pdf') {
             if (files.length < 2) {
                 setMessage('Please select at least 2 PDF files to merge.')
@@ -156,7 +144,6 @@ export default function Home() {
         setProgress(0)
         setMessage('Converting... (Larger files may take 10-20 seconds)')
 
-        // Simulate progress - faster updates for smoother feel
         const progressInterval = setInterval(() => {
             setProgress(prev => {
                 if (prev >= 95) return prev
@@ -176,16 +163,12 @@ export default function Home() {
             } else if (selectedTool.id === 'image-to-pdf') {
                 resultBlob = await conversionService.convertDocument(file, 'image', 'pdf');
             } else if (selectedTool.type === 'pdf') {
-                // PDF to Word, JPG, PNG
                 resultBlob = await conversionService.convertDocument(file, 'pdf', selectedTool.target);
-            } else if (selectedTool.type === 'image' || selectedTool.type === 'jpg' || selectedTool.type === 'png') {
-                // Image conversions
+            } else if (selectedTool.type === 'image' || selectedTool.type === 'jpg' || selectedTool.type === 'png' || selectedTool.type === 'gif') {
                 resultBlob = await conversionService.convertImage(file, selectedTool.target);
             } else if (selectedTool.type === 'docx') {
-                // Word to PDF
                 resultBlob = await conversionService.convertDocument(file, 'docx', 'pdf');
             } else if (selectedTool.type === 'data') {
-                // JSON/CSV/Excel/XML conversions
                 resultBlob = await conversionService.convertData(file, selectedTool.target);
             } else {
                 clearInterval(progressInterval);
@@ -197,17 +180,25 @@ export default function Home() {
             }
 
             clearInterval(progressInterval);
-            setProgress(100);
 
-            // Small delay to let the user see the bar hit 100%
-            setTimeout(() => {
-                const url = window.URL.createObjectURL(new Blob([resultBlob]));
-                clearTimeout(timer);
-                setMessage('Conversion successful!');
-                setDownloadUrl(url);
-                setLoading(false);
-                setTimeout(() => setProgress(0), 1000);
-            }, 800);
+            // Fast fill animation to reach 100% smoothly
+            const fastFillInterval = setInterval(() => {
+                setProgress(prev => {
+                    if (prev >= 100) {
+                        clearInterval(fastFillInterval);
+                        setTimeout(() => {
+                            const url = window.URL.createObjectURL(new Blob([resultBlob]));
+                            clearTimeout(timer);
+                            setMessage('Conversion successful!');
+                            setDownloadUrl(url);
+                            setLoading(false);
+                            setTimeout(() => setProgress(0), 1000);
+                        }, 500); // 500ms pause at 100% before switching
+                        return 100;
+                    }
+                    return prev + 10; // Increment faster to catch up
+                });
+            }, 50); // Fast update rate
 
         } catch (error) {
             console.error(error);
@@ -220,9 +211,6 @@ export default function Home() {
             }
             setProgress(0);
             setLoading(false);
-        } finally {
-            // Optional: reset progress after a delay if you want
-            // setTimeout(() => setProgress(0), 2000)
         }
     }
 
@@ -244,41 +232,41 @@ export default function Home() {
                 }
             />
 
-            <main style={{ padding: '3rem 2rem', maxWidth: '1200px', margin: '0 auto' }}>
-
-                {/* View: Tool Selection Grid */}
-                {!selectedTool && (
-                    <div style={{ textAlign: 'center' }}>
-                        <h2 style={{
-                            fontFamily: '"Outfit", sans-serif',
-                            fontSize: '2.2rem',
-                            fontWeight: '400',
-                            color: '#1D3557', // Navy Blue
-                            marginBottom: '1rem',
-                            letterSpacing: '-0.5px'
+            {!selectedTool && (
+                <>
+                    {/* Hero Section (Reverted to Simple Style) */}
+                    <div style={{
+                        padding: '5rem 2rem 3rem',
+                        textAlign: 'center',
+                        maxWidth: '800px',
+                        margin: '0 auto'
+                    }}>
+                        <h1 style={{
+                            fontSize: '2.8rem',
+                            fontWeight: 'bold',
+                            color: '#1D3557',
+                            marginBottom: '0.5rem'
                         }}>
-                            {session?.user?.user_metadata?.full_name
-                                ? `Hi ${session.user.user_metadata.full_name.split(' ')[0]}, let's get converting`
-                                : null
-                            }
-                        </h2>
+                            Hey {session?.user?.user_metadata?.full_name ? session.user.user_metadata.full_name.split(' ')[0] : 'there'}, you are on Xvert
+                        </h1>
                         <p style={{
                             fontSize: '1.5rem',
-                            fontWeight: '600',
-                            color: '#1D3557',
-                            marginBottom: '3rem',
-                            maxWidth: '700px',
-                            marginLeft: 'auto',
-                            marginRight: 'auto'
+                            color: '#666',
+                            marginBottom: '2rem'
                         }}>
-                            The only toolkit you’ll ever need to convert, edit, and master any file format—from documents to media—completely free and in just a few clicks.
+                            let's get converting
                         </p>
+                    </div>
 
+
+                    {/* Main Content Area */}
+                    <main style={{ padding: '0 2rem', maxWidth: '1400px', margin: '0 auto 4rem' }}>
+
+                        {/* Card Grid (Reverted to Simple Style) */}
                         <div style={{
                             display: 'grid',
                             gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
-                            gap: '1.5rem',
-                            padding: '1rem'
+                            gap: '2rem',
                         }}>
                             {tools.map(tool => (
                                 <div key={tool.id}
@@ -286,114 +274,78 @@ export default function Home() {
                                     style={{
                                         backgroundColor: '#fff',
                                         padding: '2rem',
-                                        borderRadius: '12px',
+                                        borderRadius: '15px',
                                         cursor: 'pointer',
                                         boxShadow: '0 4px 6px rgba(0,0,0,0.05)',
-                                        transition: 'transform 0.2s, box-shadow 0.2s',
-                                        border: '1px solid transparent',
-                                        display: 'flex',
-                                        flexDirection: 'column',
-                                        alignItems: 'flex-start',
-                                        textAlign: 'left'
+                                        transition: 'all 0.3s ease',
+                                        textAlign: 'center',
+                                        border: '1px solid #eee'
                                     }}
                                     onMouseOver={(e) => {
                                         e.currentTarget.style.transform = 'translateY(-5px)'
-                                        e.currentTarget.style.boxShadow = '0 10px 15px rgba(0,0,0,0.1)'
-                                        e.currentTarget.style.borderColor = '#A8DADC' // Light Blue border
+                                        e.currentTarget.style.boxShadow = '0 10px 20px rgba(0,0,0,0.1)'
                                     }}
                                     onMouseOut={(e) => {
                                         e.currentTarget.style.transform = 'translateY(0)'
                                         e.currentTarget.style.boxShadow = '0 4px 6px rgba(0,0,0,0.05)'
-                                        e.currentTarget.style.borderColor = 'transparent'
                                     }}
                                 >
-                                    <div style={{ marginBottom: '1rem', height: '70px', display: 'flex', alignItems: 'center' }}>
+                                    <div style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>
                                         <ToolIcon tool={tool} />
                                     </div>
-                                    <h3 style={{
-                                        fontFamily: '"Outfit", sans-serif',
-                                        color: '#1D3557',
-                                        marginBottom: '0.5rem',
-                                        fontSize: '1.25rem'
-                                    }}>{tool.name}</h3>
-                                    <p style={{ color: '#666', fontSize: '0.95rem', lineHeight: '1.5' }}>
-                                        {tool.desc}
-                                    </p>
+                                    <h3 style={{ color: '#1D3557', margin: '0 0 0.5rem 0' }}>{tool.name}</h3>
+                                    <p style={{ color: '#666', fontSize: '0.9rem', margin: 0 }}>{tool.desc}</p>
                                 </div>
                             ))}
                         </div>
-                    </div>
-                )}
+                    </main>
+                </>
+            )}
 
-                {/* View: Selected Tool Interface */}
-                {selectedTool && (
+            {/* View: Selected Tool Interface */}
+            {selectedTool && (
+                <main style={{ padding: '3rem 2rem', maxWidth: '1200px', margin: '0 auto' }}>
                     <div style={{ maxWidth: '800px', margin: '0 auto', textAlign: 'center' }}>
+                        {/* Back Button */}
                         <div style={{ textAlign: 'left', marginBottom: '2rem' }}>
-                            <span
-                                role="button"
-                                tabIndex={0}
-                                onClick={handleBackToGrid}
-                                onKeyDown={(e) => {
-                                    if (e.key === 'Enter' || e.key === ' ') handleBackToGrid();
-                                }}
-                                style={{
-                                    display: 'inline-flex',
-                                    alignItems: 'center',
-                                    gap: '0.5rem',
-                                    padding: '0.5rem 0',
-                                    color: '#1D3557', // Darker navy for better contrast
-                                    cursor: 'pointer',
-                                    fontSize: '1.2rem', // Slightly larger
-                                    fontWeight: '800', // Extra bold
-                                    transition: 'color 0.2s ease, transform 0.2s ease',
-                                    outline: 'none',
-                                    border: 'none',
-                                    background: 'transparent',
-                                    textDecoration: 'none',
-                                    userSelect: 'none'
-                                }}
-                                onMouseOver={(e) => {
-                                    e.currentTarget.style.color = '#457B9D';
-                                    e.currentTarget.style.transform = 'translateX(-5px)'; // A little nudge to show interaction
-                                }}
-                                onMouseOut={(e) => {
-                                    e.currentTarget.style.color = '#1D3557';
-                                    e.currentTarget.style.transform = 'translateX(0)';
-                                }}
-                            >
-                                ← Home
+                            <span onClick={handleBackToGrid} style={{ cursor: 'pointer', color: '#1D3557', fontWeight: 'bold' }}>
+                                ← Back to Tools
                             </span>
                         </div>
 
                         <div style={{
                             backgroundColor: '#fff',
                             padding: '3rem',
-                            borderRadius: '16px',
-                            boxShadow: '0 10px 25px rgba(0,0,0,0.05)'
+                            borderRadius: '20px',
+                            boxShadow: '0 4px 15px rgba(0,0,0,0.05)'
                         }}>
-                            <div style={{ marginBottom: '1.5rem', display: 'flex', justifyContent: 'center' }}>
-                                <div style={{ transform: 'scale(1.5)' }}>
-                                    <ToolIcon tool={selectedTool} />
-                                </div>
+                            <div style={{ marginBottom: '2rem' }}>
+                                <ToolIcon tool={selectedTool} />
                             </div>
-                            <h2 style={{
-                                fontFamily: '"Outfit", sans-serif',
-                                fontSize: '2rem',
-                                color: '#1D3557',
-                                marginBottom: '0.5rem'
-                            }}>{selectedTool.name}</h2>
-                            <p style={{ color: '#666', marginBottom: '2rem' }}>{selectedTool.desc}</p>
+                            <h2 style={{ fontSize: '2.5rem', color: '#1D3557', marginBottom: '0.5rem' }}>{selectedTool.name}</h2>
+                            <p style={{ color: '#666', marginBottom: '3rem', fontSize: '1.2rem' }}>{selectedTool.desc}</p>
 
                             <div style={{
                                 border: '2px dashed #A8DADC',
-                                borderRadius: '12px',
-                                padding: '1.5rem',
-                                backgroundColor: '#F1FAEE', // Very light mint/beige
+                                borderRadius: '15px',
+                                padding: '3rem',
+                                backgroundColor: '#f9f9f9',
                                 marginBottom: '2rem',
                                 position: 'relative',
-                                maxWidth: '400px',
-                                margin: '0 auto 2rem'
-                            }}>
+                                transition: 'all 0.3s ease'
+                            }}
+
+                                onDragOver={(e) => {
+                                    e.preventDefault();
+                                    e.currentTarget.style.backgroundColor = '#E3F2FD';
+                                    e.currentTarget.style.borderColor = '#2196F3';
+                                }}
+                                onDragLeave={(e) => {
+                                    e.preventDefault();
+                                    e.currentTarget.style.backgroundColor = '#FAFAFA';
+                                    e.currentTarget.style.borderColor = '#1D3557';
+                                }}
+                            >
                                 <input
                                     type="file"
                                     accept={getAcceptTypes(selectedTool)}
@@ -423,10 +375,10 @@ export default function Home() {
                                                 padding: '0.5rem',
                                                 marginBottom: '0.5rem',
                                                 borderRadius: '4px',
-                                                border: '1px solid #eee',
+                                                border: '1px solid #1D3557',
                                                 pointerEvents: 'auto'
                                             }}>
-                                                <span style={{ fontSize: '0.9rem', truncate: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', maxWidth: '85%' }}>
+                                                <span style={{ fontSize: '0.9rem', maxWidth: '85%' }}>
                                                     {f.name}
                                                 </span>
                                                 <button
@@ -435,47 +387,40 @@ export default function Home() {
                                                         e.preventDefault()
                                                         handleRemoveFile(index)
                                                     }}
-                                                    style={{
-                                                        background: 'none',
-                                                        border: 'none',
-                                                        color: '#D32F2F',
-                                                        cursor: 'pointer',
-                                                        fontWeight: 'bold',
-                                                        padding: '0 0.5rem'
-                                                    }}
+                                                    style={{ border: 'none', background: 'none', color: '#D32F2F', cursor: 'pointer', fontWeight: 'bold' }}
                                                 >
                                                     ✕
                                                 </button>
                                             </div>
                                         ))}
-                                        <div style={{ textAlign: 'center', marginTop: '1rem', fontSize: '0.8rem', color: '#666' }}>
-                                            Click box to add more files
-                                        </div>
                                     </div>
                                 ) : file ? (
                                     <div>
-                                        <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>📄</div>
-                                        <p style={{ fontWeight: 'bold', color: '#1D3557' }}>{file.name}</p>
-                                        <p style={{ fontSize: '0.8rem', color: '#666' }}>Click to change file</p>
+                                        <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>📄</div>
+                                        <p style={{ fontWeight: 'bold', color: '#1D3557', fontSize: '1.2rem' }}>{file.name}</p>
+                                        <p style={{ fontSize: '0.9rem', color: '#666' }}>Click to change file</p>
                                     </div>
                                 ) : (
                                     <div>
                                         <div style={{
-                                            backgroundColor: '#457B9D',
-                                            color: 'white',
-                                            padding: '1rem 2rem',
+                                            backgroundColor: '#A8DADC',
+                                            color: '#1D3557',
+                                            padding: '0.8rem 2rem',
                                             borderRadius: '50px',
                                             display: 'inline-block',
                                             fontWeight: 'bold',
                                             marginBottom: '1rem',
-                                            boxShadow: '0 4px 6px rgba(69, 123, 157, 0.3)'
+                                            cursor: 'pointer'
                                         }}>
                                             Select {selectedTool.type === 'image' ? 'Image' : selectedTool.id === 'merge-pdf' ? 'PDFs' : 'File'}
                                         </div>
-                                        <p style={{ color: '#666' }}>or drop file here</p>
+                                        <p style={{ color: '#666', fontSize: '0.9rem' }}>or drag and drop here</p>
                                     </div>
                                 )}
                             </div>
+
+                            {/* Progress bar removed as the button now handles the animation */}
+
 
                             {downloadUrl ? (
                                 <button
@@ -488,23 +433,19 @@ export default function Home() {
                                         link.remove();
                                     }}
                                     style={{
-                                        display: 'block',
-                                        width: 'auto',
-                                        minWidth: '200px',
-                                        margin: '0 auto',
-                                        backgroundColor: '#457B9D',
-                                        color: 'white',
+                                        backgroundColor: '#CBB9A4', // Beige
+                                        color: '#1D3557', // Navy text
                                         padding: '1rem 3rem',
                                         borderRadius: '50px',
                                         border: 'none',
-                                        fontSize: '1.1rem',
+                                        fontSize: '1.2rem',
                                         fontWeight: 'bold',
                                         cursor: 'pointer',
-                                        boxShadow: '0 4px 6px rgba(69, 123, 157, 0.3)',
-                                        transition: 'transform 0.05s',
-                                        animation: 'fadeIn 0.5s ease-in-out'
+                                        boxShadow: '0 4px 15px rgba(203, 185, 164, 0.4)',
+                                        transition: 'all 0.2s',
+                                        animation: 'pulse 2s infinite' // Added subtle pulse animation
                                     }}
-                                    onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.02)'}
+                                    onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
                                     onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1)'}
                                 >
                                     Download
@@ -514,33 +455,33 @@ export default function Home() {
                                     onClick={handleConvert}
                                     disabled={loading || (!file && files.length < 2)}
                                     style={{
-                                        backgroundColor: loading || (!file && files.length < 2) ? '#ccc' : '#E8D5B5', // Beige action button
-                                        color: '#2d3e50', // Dark text
-                                        padding: '1rem 3rem',
+                                        background: loading && progress > 0
+                                            ? `linear-gradient(to right, #B0D8F5 ${progress}%, #CBB9A4 ${progress}%)`
+                                            : (loading || (!file && files.length < 2) ? '#ccc' : '#CBB9A4'),
+                                        color: '#1D3557',
+                                        padding: '1rem 2.5rem',
                                         borderRadius: '50px',
                                         border: 'none',
                                         fontSize: '1.1rem',
                                         fontWeight: 'bold',
                                         cursor: loading || (!file && files.length < 2) ? 'not-allowed' : 'pointer',
-                                        transition: 'transform 0.2s',
-                                        background: (!file && files.length < 2) ? '#ccc' : '#E8D5B5',
+                                        minWidth: '200px',
+                                        boxShadow: loading ? 'none' : '0 4px 10px rgba(0,0,0,0.1)',
+                                        transition: 'background 0.3s ease-out, transform 0.2s',
                                         position: 'relative',
-                                        overflow: 'hidden',
-                                        minWidth: '200px'
+                                        overflow: 'hidden'
+                                    }}
+                                    onMouseOver={(e) => {
+                                        if (!loading && (file || files.length >= 2)) {
+                                            e.currentTarget.style.transform = 'scale(1.02)'
+                                        }
+                                    }}
+                                    onMouseOut={(e) => {
+                                        if (!loading && (file || files.length >= 2)) {
+                                            e.currentTarget.style.transform = 'scale(1)'
+                                        }
                                     }}
                                 >
-                                    {loading && (
-                                        <div style={{
-                                            position: 'absolute',
-                                            top: 0,
-                                            left: 0,
-                                            height: '100%',
-                                            width: `${progress}%`,
-                                            backgroundColor: '#A8DADC',
-                                            transition: 'width 0.3s ease-in-out',
-                                            zIndex: 0
-                                        }} />
-                                    )}
                                     <span style={{ position: 'relative', zIndex: 1 }}>
                                         {loading ? 'Converting...' : 'Convert'}
                                     </span>
@@ -552,39 +493,17 @@ export default function Home() {
                                     marginTop: '2rem',
                                     padding: '1rem',
                                     borderRadius: '8px',
-                                    backgroundColor: message.includes('failed') || message.includes('Invalid') ? '#FFE5E5' : '#E0F2F1',
-                                    color: message.includes('failed') || message.includes('Invalid') ? '#D32F2F' : '#2E7D32',
-                                    fontWeight: '500'
+                                    backgroundColor: message.includes('failed') || message.includes('Invalid') ? '#FFEBEE' : '#E8F5E9',
+                                    color: message.includes('failed') || message.includes('Invalid') ? '#C62828' : '#2E7D32',
+                                    fontWeight: '600'
                                 }}>
                                     {message}
-                                    {message.includes('failed') && (
-                                        <button
-                                            onClick={handleConvert}
-                                            style={{
-                                                marginTop: '0.5rem',
-                                                backgroundColor: '#D32F2F',
-                                                color: 'white',
-                                                border: 'none',
-                                                padding: '0.5rem 1.5rem',
-                                                borderRadius: '6px',
-                                                cursor: 'pointer',
-                                                fontWeight: 'bold',
-                                                fontSize: '0.9rem',
-                                                boxShadow: '0 2px 4px rgba(211, 47, 47, 0.3)',
-                                                display: 'block',
-                                                marginLeft: 'auto',
-                                                marginRight: 'auto'
-                                            }}
-                                        >
-                                            ↻ Retry
-                                        </button>
-                                    )}
                                 </div>
                             )}
                         </div>
                     </div>
-                )}
-            </main>
+                </main>
+            )}
         </div>
     )
 }

@@ -1,21 +1,21 @@
 import { Link } from 'react-router-dom';
 import { useState } from 'react';
 import MegaMenu from './MegaMenu';
+import Logo from './Logo';
 
 /**
- * NavigationItem Class (OOP: Encapsulation of Navigation Data)
+ * NavigationItem Class
  */
 class NavigationItem {
     constructor(label, action, id = null) {
         this.label = label;
         this.action = action;
-        this.id = id; // tool id or null for 'all tools'
+        this.id = id;
     }
 }
 
 /**
  * Navbar Component
- * Encapsulates the top navigation bar logic and rendering.
  */
 export default function Navbar({ tools, onToolSelect, onReset, session, UserAvatarComponent }) {
 
@@ -23,11 +23,11 @@ export default function Navbar({ tools, onToolSelect, onReset, session, UserAvat
 
     // Define navigation items
     const navItems = [
-        new NavigationItem('ALL TOOLS', () => setActiveMenu(activeMenu === 'all-tools' ? null : 'all-tools')),
-        new NavigationItem('CONVERT PDF', () => setActiveMenu(activeMenu === 'convert-pdf' ? null : 'convert-pdf')),
-        new NavigationItem('MERGE PDF', () => onToolSelect(tools.find(t => t.id === 'merge-pdf')), 'merge-pdf'),
-        new NavigationItem('PDF TO WORD', () => onToolSelect(tools.find(t => t.id === 'pdf-to-word')), 'pdf-to-word'),
-        new NavigationItem('IMAGE TO PDF', () => onToolSelect(tools.find(t => t.id === 'image-to-pdf')), 'image-to-pdf'),
+        new NavigationItem('All Tools', () => setActiveMenu(activeMenu === 'all-tools' ? null : 'all-tools')),
+        new NavigationItem('Convert PDF', () => setActiveMenu(activeMenu === 'convert-pdf' ? null : 'convert-pdf')),
+        new NavigationItem('Merge PDF', () => onToolSelect(tools.find(t => t.id === 'merge-pdf')), 'merge-pdf'),
+        new NavigationItem('PDF to Word', () => onToolSelect(tools.find(t => t.id === 'pdf-to-word')), 'pdf-to-word'),
+        new NavigationItem('Image to PDF', () => onToolSelect(tools.find(t => t.id === 'image-to-pdf')), 'image-to-pdf'),
     ];
 
     return (
@@ -38,66 +38,84 @@ export default function Navbar({ tools, onToolSelect, onReset, session, UserAvat
             padding: '1rem 2rem',
             backgroundColor: '#fff',
             borderBottom: '1px solid #e0e0e0',
-            boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
+            boxShadow: '0 2px 4px rgba(0,0,0,0.03)', // Lighter shadow
             position: 'sticky',
             top: 0,
-            zIndex: 100
+            zIndex: 100,
+            height: '70px'
         }}>
             {/* Logo and Navigation */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '3rem' }}>
                 {/* Logo */}
                 <div
                     onClick={onReset}
-                    style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}
+                    style={{ display: 'flex', alignItems: 'center', gap: '0.8rem', cursor: 'pointer' }}
                 >
-                    <span style={{ fontSize: '1.5rem', marginRight: '0.5rem' }}>🔄</span>
+                    <Logo width={36} height={36} />
                     <h1 style={{
                         fontFamily: '"Outfit", sans-serif',
-                        fontSize: '1.5rem',
+                        fontSize: '1.6rem',
                         margin: 0,
-                        color: '#2d3e50'
+                        color: '#1D3557', // Navy
+                        fontWeight: '800',
+                        letterSpacing: '-0.5px'
                     }}>Xvert</h1>
                 </div>
 
                 {/* Navigation Links */}
-                <nav style={{ display: 'flex', gap: '2rem' }}>
-                    {navItems.map((item, index) => (
-                        <div
-                            key={index}
-                            onClick={item.action}
-                            role="button"
-                            tabIndex={0}
-                            style={{
-                                background: 'none',
-                                border: 'none',
-                                cursor: 'pointer',
-                                fontSize: '0.9rem',
-                                fontWeight: '700',
-                                color: item.label === 'ALL TOOLS' || item.label === 'CONVERT PDF' ? '#1D3557' : '#1D3557',
-                                fontFamily: '"Outfit", sans-serif',
-                                textTransform: 'uppercase',
-                                padding: '0.5rem 0',
-                                borderBottom: '2px solid transparent',
-                                transition: 'all 0.2s',
-                                letterSpacing: '0.5px',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '0.3rem'
-                            }}
-                            onMouseOver={(e) => e.currentTarget.style.color = '#457B9D'}
-                            onMouseOut={(e) => e.currentTarget.style.color = '#1D3557'}
-                            onKeyDown={(e) => e.key === 'Enter' && item.action()}
-                        >
-                            {item.label}
-                            {(item.label === 'ALL TOOLS' || item.label === 'CONVERT PDF') && (
-                                <span style={{
-                                    fontSize: '0.7em',
-                                    transform: (item.label === 'ALL TOOLS' && activeMenu === 'all-tools') || (item.label === 'CONVERT PDF' && activeMenu === 'convert-pdf') ? 'rotate(180deg)' : 'rotate(0deg)',
-                                    transition: 'transform 0.2s'
-                                }}>▼</span>
-                            )}
-                        </div>
-                    ))}
+                <nav style={{ display: 'flex', gap: '0.5rem' }}>
+                    {navItems.map((item, index) => {
+                        const isActive = (item.label === 'All Tools' && activeMenu === 'all-tools') ||
+                            (item.label === 'Convert PDF' && activeMenu === 'convert-pdf');
+
+                        return (
+                            <div
+                                key={index}
+                                onClick={item.action}
+                                role="button"
+                                tabIndex={0}
+                                style={{
+                                    background: isActive ? '#E3F2FD' : 'transparent', // Light Blue bg when active
+                                    border: 'none',
+                                    borderRadius: '20px',
+                                    cursor: 'pointer',
+                                    fontSize: '0.95rem',
+                                    fontWeight: '600',
+                                    color: isActive ? '#1D3557' : '#4a5568',
+                                    fontFamily: '"Outfit", sans-serif',
+                                    padding: '0.5rem 1rem',
+                                    transition: 'all 0.2s ease',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '0.4rem',
+                                    userSelect: 'none'
+                                }}
+                                onMouseOver={(e) => {
+                                    if (!isActive) {
+                                        e.currentTarget.style.backgroundColor = '#F7F9FC';
+                                        e.currentTarget.style.color = '#1D3557';
+                                    }
+                                }}
+                                onMouseOut={(e) => {
+                                    if (!isActive) {
+                                        e.currentTarget.style.backgroundColor = 'transparent';
+                                        e.currentTarget.style.color = '#4a5568';
+                                    }
+                                }}
+                                onKeyDown={(e) => e.key === 'Enter' && item.action()}
+                            >
+                                {item.label}
+                                {(item.label === 'All Tools' || item.label === 'Convert PDF') && (
+                                    <span style={{
+                                        fontSize: '0.7em',
+                                        transform: isActive ? 'rotate(180deg)' : 'rotate(0deg)',
+                                        transition: 'transform 0.2s',
+                                        opacity: 0.7
+                                    }}>▼</span>
+                                )}
+                            </div>
+                        );
+                    })}
                 </nav>
             </div>
 
@@ -107,33 +125,52 @@ export default function Navbar({ tools, onToolSelect, onReset, session, UserAvat
                     UserAvatarComponent
                 ) : (
                     <div style={{ display: 'flex', gap: '1rem' }}>
-                        <Link to="/login" className="nav-btn" style={{
+                        <Link to="/login" style={{
                             textDecoration: 'none',
-                            backgroundColor: '#B0D8F5',
-                            color: '#1a1a1a',
-                            padding: '0.5rem 1.5rem',
-                            borderRadius: '30px',
-                            fontSize: '0.9rem',
+                            backgroundColor: '#A8DADC', // Light Blue Pill Button
+                            color: '#1D3557', // Navy Text
+                            padding: '0.7rem 2rem',
+                            borderRadius: '50px',
+                            fontSize: '1.1rem',
                             fontWeight: '700',
                             fontFamily: '"Nunito", sans-serif',
-                            transition: 'transform 0.2s'
+                            transition: 'all 0.2s',
+                            boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)'
                         }}
-                            onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
-                            onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1)'}
-                        >Login</Link>
-                        <Link to="/signup" className="nav-btn" style={{
+                            onMouseOver={(e) => {
+                                e.currentTarget.style.transform = 'translateY(-1px)';
+                                e.currentTarget.style.backgroundColor = '#98C9DC';
+                                e.currentTarget.style.boxShadow = '0 4px 8px rgba(0, 0, 0, 0.15)';
+                            }}
+                            onMouseOut={(e) => {
+                                e.currentTarget.style.transform = 'translateY(0)';
+                                e.currentTarget.style.backgroundColor = '#A8DADC';
+                                e.currentTarget.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.1)';
+                            }}
+                        >Log in</Link>
+
+                        <Link to="/signup" style={{
                             textDecoration: 'none',
-                            backgroundColor: '#B0D8F5',
-                            color: '#1a1a1a',
-                            padding: '0.5rem 1.5rem',
-                            borderRadius: '30px',
-                            fontSize: '0.9rem',
+                            backgroundColor: '#A8DADC', // Light Blue Pill Button
+                            color: '#1D3557', // Navy Text
+                            padding: '0.7rem 2rem',
+                            borderRadius: '50px',
+                            fontSize: '1.1rem',
                             fontWeight: '700',
                             fontFamily: '"Nunito", sans-serif',
-                            transition: 'transform 0.2s'
+                            transition: 'all 0.2s',
+                            boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)'
                         }}
-                            onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
-                            onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                            onMouseOver={(e) => {
+                                e.currentTarget.style.transform = 'translateY(-1px)';
+                                e.currentTarget.style.backgroundColor = '#98C9DC';
+                                e.currentTarget.style.boxShadow = '0 4px 8px rgba(0, 0, 0, 0.15)';
+                            }}
+                            onMouseOut={(e) => {
+                                e.currentTarget.style.transform = 'translateY(0)';
+                                e.currentTarget.style.backgroundColor = '#A8DADC';
+                                e.currentTarget.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.1)';
+                            }}
                         >Sign Up</Link>
                     </div>
                 )}
