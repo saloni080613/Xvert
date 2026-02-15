@@ -1,140 +1,157 @@
-import { Link } from 'react-router-dom';
-import { useState } from 'react';
-import MegaMenu from './MegaMenu';
+import { Link } from 'react-router-dom'
+import { useState } from 'react'
+import { motion } from 'framer-motion'
+import MegaMenu from './MegaMenu'
+import SettingsPanel from './SettingsPanel'
 
-/**
- * NavigationItem Class (OOP: Encapsulation of Navigation Data)
- */
+const springBounce = { type: 'spring', stiffness: 400, damping: 20 }
+
 class NavigationItem {
     constructor(label, action, id = null) {
-        this.label = label;
-        this.action = action;
-        this.id = id; // tool id or null for 'all tools'
+        this.label = label
+        this.action = action
+        this.id = id
     }
 }
 
-/**
- * Navbar Component
- * Encapsulates the top navigation bar logic and rendering.
- */
 export default function Navbar({ tools, onToolSelect, onReset, session, UserAvatarComponent }) {
+    const [activeMenu, setActiveMenu] = useState(null)
+    const [settingsOpen, setSettingsOpen] = useState(false)
 
-    const [activeMenu, setActiveMenu] = useState(null);
-
-    // Define navigation items
     const navItems = [
         new NavigationItem('ALL TOOLS', () => setActiveMenu(activeMenu === 'all-tools' ? null : 'all-tools')),
         new NavigationItem('CONVERT PDF', () => setActiveMenu(activeMenu === 'convert-pdf' ? null : 'convert-pdf')),
         new NavigationItem('MERGE PDF', () => onToolSelect(tools.find(t => t.id === 'merge-pdf')), 'merge-pdf'),
         new NavigationItem('PDF TO WORD', () => onToolSelect(tools.find(t => t.id === 'pdf-to-word')), 'pdf-to-word'),
         new NavigationItem('IMAGE TO PDF', () => onToolSelect(tools.find(t => t.id === 'image-to-pdf')), 'image-to-pdf'),
-    ];
+    ]
 
     return (
         <header style={{
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
-            padding: '1rem 2rem',
-            backgroundColor: '#fff',
-            borderBottom: '1px solid #e0e0e0',
-            boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
+            padding: '0.8rem 2rem',
+            background: 'var(--ag-navbar-bg)',
+            backdropFilter: 'blur(24px)',
+            WebkitBackdropFilter: 'blur(24px)',
+            borderBottom: '1px solid var(--ag-navbar-border)',
+            boxShadow: '0 4px 30px var(--ag-glass-shadow)',
             position: 'sticky',
             top: 0,
-            zIndex: 100
+            zIndex: 100,
+            transition: 'background 0.35s, border-color 0.35s',
         }}>
             {/* Logo and Navigation */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '3rem' }}>
                 {/* Logo */}
-                <div
+                <motion.div
                     onClick={onReset}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    transition={springBounce}
                     style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}
                 >
-                    <span style={{ fontSize: '1.5rem', marginRight: '0.5rem' }}>🔄</span>
+                    <span style={{ fontSize: '1.5rem' }}>🔄</span>
                     <h1 style={{
                         fontFamily: '"Outfit", sans-serif',
                         fontSize: '1.5rem',
                         margin: 0,
-                        color: '#2d3e50'
+                        color: 'var(--ag-text)',
+                        fontWeight: 700,
                     }}>Xvert</h1>
-                </div>
+                </motion.div>
 
                 {/* Navigation Links */}
-                <nav style={{ display: 'flex', gap: '2rem' }}>
+                <nav style={{ display: 'flex', gap: '1.5rem' }}>
                     {navItems.map((item, index) => (
-                        <div
+                        <motion.div
                             key={index}
                             onClick={item.action}
                             role="button"
                             tabIndex={0}
+                            whileHover={{ scale: 1.05, y: -1 }}
+                            whileTap={{ scale: 0.95 }}
+                            transition={springBounce}
                             style={{
                                 background: 'none',
                                 border: 'none',
                                 cursor: 'pointer',
-                                fontSize: '0.9rem',
-                                fontWeight: '700',
-                                color: item.label === 'ALL TOOLS' || item.label === 'CONVERT PDF' ? '#1D3557' : '#1D3557',
+                                fontSize: '0.82rem',
+                                fontWeight: 700,
+                                color: 'var(--ag-text)',
                                 fontFamily: '"Outfit", sans-serif',
                                 textTransform: 'uppercase',
                                 padding: '0.5rem 0',
-                                borderBottom: '2px solid transparent',
-                                transition: 'all 0.2s',
                                 letterSpacing: '0.5px',
                                 display: 'flex',
                                 alignItems: 'center',
-                                gap: '0.3rem'
+                                gap: '0.3rem',
+                                transition: 'color 0.2s',
                             }}
-                            onMouseOver={(e) => e.currentTarget.style.color = '#457B9D'}
-                            onMouseOut={(e) => e.currentTarget.style.color = '#1D3557'}
+                            onMouseOver={(e) => e.currentTarget.style.color = 'var(--ag-accent)'}
+                            onMouseOut={(e) => e.currentTarget.style.color = 'var(--ag-text)'}
                             onKeyDown={(e) => e.key === 'Enter' && item.action()}
                         >
                             {item.label}
                             {(item.label === 'ALL TOOLS' || item.label === 'CONVERT PDF') && (
-                                <span style={{
-                                    fontSize: '0.7em',
-                                    transform: (item.label === 'ALL TOOLS' && activeMenu === 'all-tools') || (item.label === 'CONVERT PDF' && activeMenu === 'convert-pdf') ? 'rotate(180deg)' : 'rotate(0deg)',
-                                    transition: 'transform 0.2s'
-                                }}>▼</span>
+                                <motion.span
+                                    animate={{
+                                        rotate: (item.label === 'ALL TOOLS' && activeMenu === 'all-tools') ||
+                                                (item.label === 'CONVERT PDF' && activeMenu === 'convert-pdf')
+                                            ? 180 : 0
+                                    }}
+                                    transition={springBounce}
+                                    style={{ fontSize: '0.65em', display: 'inline-block' }}
+                                >
+                                    ▼
+                                </motion.span>
                             )}
-                        </div>
+                        </motion.div>
                     ))}
                 </nav>
             </div>
 
-            {/* User Section (Session/Auth) */}
-            <div>
+            {/* Right section: Settings + Auth */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                <SettingsPanel
+                    isOpen={settingsOpen}
+                    onToggle={() => setSettingsOpen(prev => !prev)}
+                />
+
                 {session ? (
                     UserAvatarComponent
                 ) : (
-                    <div style={{ display: 'flex', gap: '1rem' }}>
-                        <Link to="/login" className="nav-btn" style={{
-                            textDecoration: 'none',
-                            backgroundColor: '#B0D8F5',
-                            color: '#1a1a1a',
-                            padding: '0.5rem 1.5rem',
-                            borderRadius: '30px',
-                            fontSize: '0.9rem',
-                            fontWeight: '700',
-                            fontFamily: '"Nunito", sans-serif',
-                            transition: 'transform 0.2s'
-                        }}
-                            onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
-                            onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1)'}
-                        >Login</Link>
-                        <Link to="/signup" className="nav-btn" style={{
-                            textDecoration: 'none',
-                            backgroundColor: '#B0D8F5',
-                            color: '#1a1a1a',
-                            padding: '0.5rem 1.5rem',
-                            borderRadius: '30px',
-                            fontSize: '0.9rem',
-                            fontWeight: '700',
-                            fontFamily: '"Nunito", sans-serif',
-                            transition: 'transform 0.2s'
-                        }}
-                            onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
-                            onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1)'}
-                        >Sign Up</Link>
+                    <div style={{ display: 'flex', gap: '0.75rem' }}>
+                        <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} transition={springBounce}>
+                            <Link to="/login" style={{
+                                textDecoration: 'none',
+                                background: 'var(--ag-btn-secondary)',
+                                backdropFilter: 'blur(8px)',
+                                color: 'var(--ag-text)',
+                                padding: '0.5rem 1.5rem',
+                                borderRadius: '30px',
+                                fontSize: '0.85rem',
+                                fontWeight: 700,
+                                fontFamily: '"Nunito", sans-serif',
+                                border: '1px solid var(--ag-glass-border)',
+                                display: 'inline-block',
+                            }}>Login</Link>
+                        </motion.div>
+                        <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} transition={springBounce}>
+                            <Link to="/signup" style={{
+                                textDecoration: 'none',
+                                background: 'var(--ag-btn-primary)',
+                                color: 'var(--ag-btn-primary-text)',
+                                padding: '0.5rem 1.5rem',
+                                borderRadius: '30px',
+                                fontSize: '0.85rem',
+                                fontWeight: 700,
+                                fontFamily: '"Nunito", sans-serif',
+                                boxShadow: '0 4px 15px var(--ag-accent-glow)',
+                                display: 'inline-block',
+                            }}>Sign Up</Link>
+                        </motion.div>
                     </div>
                 )}
             </div>
@@ -149,5 +166,5 @@ export default function Navbar({ tools, onToolSelect, onReset, session, UserAvat
                 />
             )}
         </header>
-    );
+    )
 }

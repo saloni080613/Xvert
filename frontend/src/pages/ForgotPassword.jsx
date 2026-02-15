@@ -1,108 +1,89 @@
 import { useState } from 'react'
+import { motion } from 'framer-motion'
 import authService from '../services/AuthService'
 import { Link } from 'react-router-dom'
+import AntiGravityBackground from '../components/AntiGravityBackground'
+import { useToast } from '../components/ToastContext'
+import { KeyRound } from 'lucide-react'
+
+const springBounce = { type: 'spring', stiffness: 400, damping: 20 }
 
 export default function ForgotPassword() {
     const [email, setEmail] = useState('')
     const [loading, setLoading] = useState(false)
-    const [error, setError] = useState(null)
-    const [message, setMessage] = useState(null)
+    const { addToast } = useToast()
 
     const handleResetPassword = async (e) => {
         e.preventDefault()
         setLoading(true)
-        setError(null)
-        setMessage(null)
 
         const { error } = await authService.resetPasswordForEmail(email)
 
         if (error) {
-            setError(error.message)
+            addToast(error.message, 'error')
         } else {
-            setMessage('Check your email for the password reset link.')
+            addToast('Check your email for the password reset link.', 'success', 6000)
         }
         setLoading(false)
     }
 
     return (
-        <div style={{
-            height: '100vh',
-            width: '100%',
-            backgroundImage: "url('/reset_password_bg.png')",
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
-            backgroundRepeat: 'no-repeat',
-            display: 'flex',
-            flexDirection: 'column',
-            fontFamily: '"Nunito", sans-serif',
-            overflow: 'hidden',
-            margin: 0,
-            padding: 0
-        }}>
-
+        <AntiGravityBackground>
             <div style={{
-                flex: 1,
+                minHeight: '100vh',
                 display: 'flex',
                 justifyContent: 'center',
                 alignItems: 'center',
-                padding: '1rem'
+                padding: '2rem',
             }}>
-                <div style={{
-                    width: '100%',
-                    maxWidth: '260px', // Small square size matching Login
-                    backgroundColor: 'rgba(255, 255, 255, 0.1)', // Glass effect
-                    backdropFilter: 'blur(20px)',
-                    borderRadius: '20px', // Round edges
-                    padding: '1.5rem',
-                    boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.37)',
-                    border: '1px solid rgba(255, 255, 255, 0.18)',
-                    color: 'white'
-                }}>
-                    <h2 style={{
+                <motion.div
+                    initial={{ opacity: 0, y: 30, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+                    className="glass-panel"
+                    style={{
+                        width: '100%',
+                        maxWidth: '400px',
+                        padding: '2.5rem',
                         textAlign: 'center',
-                        marginBottom: '1rem',
-                        fontSize: '1.3rem',
-                        fontWeight: '600',
-                        color: '#fff',
-                        fontFamily: '"Outfit", sans-serif'
+                    }}
+                >
+                    {/* Illustration */}
+                    <motion.div
+                        initial={{ scale: 0, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        transition={{ type: 'spring', stiffness: 400, damping: 20, delay: 0.1 }}
+                        style={{
+                            width: '140px', height: '140px', margin: '0 auto 1rem',
+                            borderRadius: '22px',
+                            background: 'linear-gradient(135deg, #1e1040, #2d1b69)',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            overflow: 'hidden',
+                            boxShadow: '0 8px 25px rgba(124,58,237,0.2)',
+                        }}
+                    >
+                        <img
+                            src="/illustrations/login.png"
+                            alt="Space astronaut"
+                            style={{ width: '85%', height: 'auto', mixBlendMode: 'screen' }}
+                        />
+                    </motion.div>
+
+                    <h2 style={{
+                        fontFamily: '"Outfit", sans-serif',
+                        fontSize: '1.8rem',
+                        fontWeight: 700,
+                        color: 'var(--ag-text)',
+                        marginBottom: '0.5rem',
                     }}>Reset Password</h2>
+                    <p style={{
+                        color: 'var(--ag-text-secondary)',
+                        marginBottom: '2rem',
+                        fontSize: '0.9rem',
+                        lineHeight: 1.5,
+                    }}>Enter your email and we'll send you a link to reset your password</p>
 
-                    {error && (
-                        <div style={{
-                            backgroundColor: 'rgba(255, 20, 20, 0.25)',
-                            border: '1px solid rgba(255, 80, 80, 0.5)',
-                            color: '#FFCDD2',
-                            padding: '0.75rem',
-                            borderRadius: '4px',
-                            marginBottom: '1rem',
-                            fontSize: '0.85rem',
-                            fontWeight: '500',
-                            textAlign: 'center',
-                            boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-                        }}>
-                            {error}
-                        </div>
-                    )}
-
-                    {message && (
-                        <div style={{
-                            backgroundColor: 'rgba(30, 200, 30, 0.4)', // Slightly stronger green
-                            border: '1px solid rgba(130, 255, 130, 0.6)',
-                            color: '#ffffff', // Pure white for max visibility
-                            padding: '0.75rem',
-                            borderRadius: '4px',
-                            marginBottom: '1rem',
-                            fontSize: '0.9rem', // Slightly larger font
-                            fontWeight: '600', // Semia-bold
-                            textAlign: 'center',
-                            boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
-                            textShadow: '0 1px 2px rgba(0,0,0,0.5)' // Text shadow for legibility
-                        }}>
-                            {message}
-                        </div>
-                    )}
-
-                    <form onSubmit={handleResetPassword} style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
+                    <form onSubmit={handleResetPassword} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                         <input
                             type="email"
                             value={email}
@@ -111,76 +92,56 @@ export default function ForgotPassword() {
                             placeholder="Enter your email"
                             style={{
                                 width: '100%',
-                                padding: '0.8rem',
-                                borderRadius: '4px',
-                                border: 'none',
-                                backgroundColor: 'rgba(255, 255, 255, 0.2)',
-                                color: 'white',
-                                fontSize: '0.9rem',
+                                padding: '0.9rem 1rem',
+                                borderRadius: '12px',
+                                border: '1px solid var(--ag-glass-border)',
+                                backgroundColor: 'var(--ag-input-bg)',
+                                color: 'var(--ag-text)',
+                                fontSize: '0.95rem',
                                 outline: 'none',
-                                boxSizing: 'border-box'
+                                boxSizing: 'border-box',
+                                backdropFilter: 'blur(8px)',
+                                fontFamily: '"Nunito", sans-serif',
+                                transition: 'border-color 0.3s, box-shadow 0.3s',
+                            }}
+                            onFocus={(e) => {
+                                e.target.style.borderColor = 'var(--ag-accent)'
+                                e.target.style.boxShadow = '0 0 15px var(--ag-accent-glow)'
+                            }}
+                            onBlur={(e) => {
+                                e.target.style.borderColor = 'var(--ag-glass-border)'
+                                e.target.style.boxShadow = 'none'
                             }}
                         />
 
-                        <button
+                        <motion.button
                             type="submit"
                             disabled={loading}
-                            style={{
-                                marginTop: '0.5rem',
-                                width: '100%',
-                                padding: '0.8rem',
-                                borderRadius: '4px',
-                                border: 'none',
-                                backgroundColor: '#B0D8F5', // Soft Sky Blue
-                                color: '#1a1a1a', // Dark text
-                                fontSize: '0.85rem',
-                                fontWeight: '700',
-                                cursor: 'pointer',
-                                textTransform: 'uppercase',
-                                letterSpacing: '1px',
-                                transition: 'transform 0.2s',
-                                opacity: loading ? 0.8 : 1
-                            }}
+                            className="ag-btn-primary"
+                            whileHover={!loading ? { scale: 1.04 } : {}}
+                            whileTap={!loading ? { scale: 0.96 } : {}}
+                            transition={springBounce}
+                            style={{ width: '100%', marginTop: '0.5rem' }}
                         >
-                            {loading ? 'SENDING...' : 'SEND RESET LINK'}
-                        </button>
+                            {loading ? 'Sending...' : 'Send Reset Link'}
+                        </motion.button>
                     </form>
 
                     <div style={{
-                        display: 'flex',
-                        justifyContent: 'center',
-                        marginTop: '1rem',
-                        fontSize: '0.75rem',
-                        color: '#ffffff',
-                        textShadow: '0 1px 2px rgba(0,0,0,0.2)'
+                        marginTop: '1.5rem',
+                        fontSize: '0.85rem',
                     }}>
-                        <Link to="/login" style={{ color: '#ffffff', textDecoration: 'none', fontWeight: 'bold' }}>Back to Login</Link>
+                        <Link to="/login" style={{
+                            color: 'var(--ag-accent)',
+                            textDecoration: 'none',
+                            fontWeight: 700,
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '0.4rem',
+                        }}>← Back to Login</Link>
                     </div>
-                </div>
+                </motion.div>
             </div>
-
-            <div style={{
-                width: '100vw',
-                padding: '0.8rem 2rem',
-                backgroundColor: '#f5f5f5',
-                borderTop: '1px solid #e0e0e0',
-                display: 'flex',
-                justifyContent: 'flex-end',
-                alignItems: 'center',
-                gap: '2rem',
-                fontSize: '0.7rem',
-                color: '#666',
-                fontFamily: '"Nunito", sans-serif',
-                boxSizing: 'border-box',
-                whiteSpace: 'nowrap',
-                overflowX: 'auto'
-            }}>
-                <span>Copyright © 2025 Xvert. All rights reserved.</span>
-                <span style={{ cursor: 'pointer' }}>Terms of Use</span>
-                <span style={{ cursor: 'pointer' }}>Cookie preferences</span>
-                <span style={{ cursor: 'pointer' }}>Privacy</span>
-                <span style={{ cursor: 'pointer' }}>Do not sell or share my personal information</span>
-            </div>
-        </div>
+        </AntiGravityBackground>
     )
 }

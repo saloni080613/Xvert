@@ -5,7 +5,7 @@ A full-stack file conversion platform with React frontend, Python FastAPI backen
 ## User Review Required
 
 > [!IMPORTANT]
-> **Project Name**: Using "FileForge" as the project name. Let me know if you prefer a different name.
+> **Project Name**: Using "Xvert" as the project name. Let me know if you prefer a different name.
 
 > [!NOTE]
 > **Docker**: Not required for initial development or deployment. Can be added later if needed for audio conversion (FFmpeg).

@@ -1,270 +1,228 @@
 import { useState, useEffect } from 'react'
+import { motion } from 'framer-motion'
 import authService from '../services/AuthService'
 import { Link, useNavigate } from 'react-router-dom'
+import AntiGravityBackground from '../components/AntiGravityBackground'
+import { useToast } from '../components/ToastContext'
+import { ShieldCheck, Eye, EyeOff } from 'lucide-react'
+
+const springBounce = { type: 'spring', stiffness: 400, damping: 20 }
+
+const inputStyle = {
+    width: '100%',
+    padding: '0.9rem 3rem 0.9rem 1rem',
+    borderRadius: '12px',
+    border: '1px solid var(--ag-glass-border)',
+    backgroundColor: 'var(--ag-input-bg)',
+    color: 'var(--ag-text)',
+    fontSize: '0.95rem',
+    outline: 'none',
+    boxSizing: 'border-box',
+    backdropFilter: 'blur(8px)',
+    fontFamily: '"Nunito", sans-serif',
+    transition: 'border-color 0.3s, box-shadow 0.3s',
+}
 
 export default function UpdatePassword() {
-    const [password, setPassword] = useState('')
+    const [newPassword, setNewPassword] = useState('')
     const [confirmPassword, setConfirmPassword] = useState('')
-    const [showPassword, setShowPassword] = useState(false)
-    const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+    const [showNew, setShowNew] = useState(false)
+    const [showConfirm, setShowConfirm] = useState(false)
     const [loading, setLoading] = useState(false)
-    const [error, setError] = useState(null)
-    const [message, setMessage] = useState(null)
+    const [ready, setReady] = useState(false)
     const navigate = useNavigate()
+    const { addToast } = useToast()
 
     useEffect(() => {
-        // Check if we have a valid session (from the magic link)
-        authService.getSession().then(({ data: { session } }) => {
-            if (!session) {
-                setError("Invalid or expired password reset link.")
-            }
-        })
+        const hash = window.location.hash
+        if (hash && hash.includes('access_token')) {
+            setReady(true)
+        } else {
+            authService.getSession().then(({ data: { session } }) => {
+                if (session) setReady(true)
+            })
+        }
     }, [])
 
     const handleUpdatePassword = async (e) => {
         e.preventDefault()
 
-        if (password !== confirmPassword) {
-            setError("Passwords do not match")
+        if (newPassword !== confirmPassword) {
+            addToast('Passwords do not match', 'error')
+            return
+        }
+
+        if (newPassword.length < 6) {
+            addToast('Password must be at least 6 characters', 'error')
             return
         }
 
         setLoading(true)
-        setError(null)
-        setMessage(null)
-
-        const { error } = await authService.updatePassword(password)
+        const { error } = await authService.updatePassword(newPassword)
 
         if (error) {
-            setError(error.message)
+            addToast(error.message, 'error')
         } else {
-            setMessage('Password updated successfully! Redirecting to login...')
-            setTimeout(() => {
-                navigate('/login')
-            }, 3000)
+            addToast('Password updated successfully!', 'success')
+            setTimeout(() => navigate('/'), 2000)
         }
         setLoading(false)
     }
 
-    return (
-        <div style={{
-            height: '100vh',
-            width: '100%',
-            backgroundImage: "url('/reset_password_bg.png')",
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
-            backgroundRepeat: 'no-repeat',
-            display: 'flex',
-            flexDirection: 'column',
-            fontFamily: '"Nunito", sans-serif',
-            overflow: 'hidden',
-            margin: 0,
-            padding: 0
-        }}>
+    const focusHandler = {
+        onFocus: (e) => {
+            e.target.style.borderColor = 'var(--ag-accent)'
+            e.target.style.boxShadow = '0 0 15px var(--ag-accent-glow)'
+        },
+        onBlur: (e) => {
+            e.target.style.borderColor = 'var(--ag-glass-border)'
+            e.target.style.boxShadow = 'none'
+        },
+    }
 
+    const eyeStyle = {
+        position: 'absolute',
+        right: '12px',
+        top: '50%',
+        transform: 'translateY(-50%)',
+        background: 'none',
+        border: 'none',
+        cursor: 'pointer',
+        color: 'var(--ag-text-secondary)',
+        display: 'flex',
+        padding: '4px',
+    }
+
+    return (
+        <AntiGravityBackground>
             <div style={{
-                flex: 1,
+                minHeight: '100vh',
                 display: 'flex',
                 justifyContent: 'center',
                 alignItems: 'center',
-                padding: '1rem'
+                padding: '2rem',
             }}>
-                <div style={{
-                    width: '100%',
-                    maxWidth: '260px',
-                    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                    backdropFilter: 'blur(20px)',
-                    borderRadius: '20px',
-                    padding: '1.5rem',
-                    boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.37)',
-                    border: '1px solid rgba(255, 255, 255, 0.18)',
-                    color: 'white'
-                }}>
-                    <h2 style={{
+                <motion.div
+                    initial={{ opacity: 0, y: 30, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+                    className="glass-panel"
+                    style={{
+                        width: '100%',
+                        maxWidth: '400px',
+                        padding: '2.5rem',
                         textAlign: 'center',
-                        marginBottom: '1rem',
-                        fontSize: '1.3rem',
-                        fontWeight: '600',
-                        color: '#fff',
-                        fontFamily: '"Outfit", sans-serif'
-                    }}>New Password</h2>
+                    }}
+                >
+                    {/* Illustration */}
+                    <motion.div
+                        initial={{ scale: 0, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        transition={{ type: 'spring', stiffness: 400, damping: 20, delay: 0.1 }}
+                        style={{
+                            width: '140px', height: '140px', margin: '0 auto 1rem',
+                            borderRadius: '22px',
+                            background: 'linear-gradient(135deg, #1e1040, #2d1b69)',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            overflow: 'hidden',
+                            boxShadow: '0 8px 25px rgba(124,58,237,0.2)',
+                        }}
+                    >
+                        <img
+                            src="/illustrations/login.png"
+                            alt="Space astronaut"
+                            style={{ width: '85%', height: 'auto', mixBlendMode: 'screen' }}
+                        />
+                    </motion.div>
 
-                    {error && (
+                    <h2 style={{
+                        fontFamily: '"Outfit", sans-serif',
+                        fontSize: '1.8rem',
+                        fontWeight: 700,
+                        color: 'var(--ag-text)',
+                        marginBottom: '0.5rem',
+                    }}>Update Password</h2>
+                    <p style={{
+                        color: 'var(--ag-text-secondary)',
+                        marginBottom: '2rem',
+                        fontSize: '0.9rem',
+                    }}>Choose a strong new password</p>
+
+                    {!ready ? (
                         <div style={{
-                            backgroundColor: 'rgba(255, 20, 20, 0.25)',
-                            border: '1px solid rgba(255, 80, 80, 0.5)',
-                            color: '#FFCDD2',
-                            padding: '0.75rem',
-                            borderRadius: '4px',
-                            marginBottom: '1rem',
-                            fontSize: '0.85rem',
-                            fontWeight: '500',
-                            textAlign: 'center',
-                            boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                            padding: '2rem',
+                            color: 'var(--ag-text-secondary)',
+                            fontSize: '0.9rem'
                         }}>
-                            {error}
+                            Verifying reset link...
                         </div>
+                    ) : (
+                        <form onSubmit={handleUpdatePassword} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                            <div style={{ position: 'relative' }}>
+                                <input
+                                    type={showNew ? 'text' : 'password'}
+                                    value={newPassword}
+                                    onChange={(e) => setNewPassword(e.target.value)}
+                                    required
+                                    placeholder="New Password"
+                                    style={inputStyle}
+                                    {...focusHandler}
+                                />
+                                <motion.button
+                                    type="button"
+                                    onClick={() => setShowNew(!showNew)}
+                                    whileHover={{ scale: 1.1 }}
+                                    whileTap={{ scale: 0.9 }}
+                                    style={eyeStyle}
+                                >
+                                    {showNew ? <EyeOff size={18} /> : <Eye size={18} />}
+                                </motion.button>
+                            </div>
+
+                            <div style={{ position: 'relative' }}>
+                                <input
+                                    type={showConfirm ? 'text' : 'password'}
+                                    value={confirmPassword}
+                                    onChange={(e) => setConfirmPassword(e.target.value)}
+                                    required
+                                    placeholder="Confirm New Password"
+                                    style={inputStyle}
+                                    {...focusHandler}
+                                />
+                                <motion.button
+                                    type="button"
+                                    onClick={() => setShowConfirm(!showConfirm)}
+                                    whileHover={{ scale: 1.1 }}
+                                    whileTap={{ scale: 0.9 }}
+                                    style={eyeStyle}
+                                >
+                                    {showConfirm ? <EyeOff size={18} /> : <Eye size={18} />}
+                                </motion.button>
+                            </div>
+
+                            <motion.button
+                                type="submit"
+                                disabled={loading}
+                                className="ag-btn-primary"
+                                whileHover={!loading ? { scale: 1.04 } : {}}
+                                whileTap={!loading ? { scale: 0.96 } : {}}
+                                transition={springBounce}
+                                style={{ width: '100%', marginTop: '0.5rem' }}
+                            >
+                                {loading ? 'Updating...' : 'Update Password'}
+                            </motion.button>
+                        </form>
                     )}
 
-                    {message && (
-                        <div style={{
-                            backgroundColor: 'rgba(20, 160, 20, 0.25)',
-                            border: '1px solid rgba(100, 200, 100, 0.5)',
-                            color: '#E8F5E9',
-                            padding: '0.75rem',
-                            borderRadius: '4px',
-                            marginBottom: '1rem',
-                            fontSize: '0.85rem',
-                            fontWeight: '500',
-                            textAlign: 'center',
-                            boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-                        }}>
-                            {message}
-                        </div>
-                    )}
-
-                    <form onSubmit={handleUpdatePassword} style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
-                        <div style={{ position: 'relative' }}>
-                            <input
-                                type={showPassword ? "text" : "password"}
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                required
-                                placeholder="New Password"
-                                style={{
-                                    width: '100%',
-                                    padding: '0.8rem',
-                                    borderRadius: '4px',
-                                    border: 'none',
-                                    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-                                    color: 'white',
-                                    fontSize: '0.9rem',
-                                    outline: 'none',
-                                    boxSizing: 'border-box'
-                                }}
-                            />
-                            <button
-                                type="button"
-                                onClick={() => setShowPassword(!showPassword)}
-                                style={{
-                                    position: 'absolute',
-                                    right: '10px',
-                                    top: '50%',
-                                    transform: 'translateY(-50%)',
-                                    background: 'none',
-                                    border: 'none',
-                                    cursor: 'pointer',
-                                    color: '#ffffff',
-                                    display: 'flex',
-                                    alignItems: 'center'
-                                }}
-                            >
-                                {showPassword ? (
-                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-                                        <path d="M12 7c2.76 0 5 2.24 5 5 0 .65-.13 1.26-.36 1.83l2.92 2.92c1.51-1.26 2.7-2.89 3.43-4.75-1.73-4.39-6-7.5-11-7.5-1.4 0-2.74.25-4.01.7l2.16 2.16C10.74 7.13 11.35 7 12 7zM2 4.27l2.28 2.28.46.46A11.804 11.804 0 0 0 1 12c1.73 4.39 6 7.5 11 7.5 1.55 0 3.03-.3 4.38-.84l.42.42L19.73 22 21 20.73 3.27 3 2 4.27zM7.53 9.8l1.55 1.55c-.05.21-.08.43-.08.65 0 1.66 1.34 3 3 3 .22 0 .44-.03.65-.08l1.55 1.55c-.67.33-1.41.53-2.2.53-2.76 0-5-2.24-5-5 0-.79.2-1.53.53-2.2zm4.31-.78 3.15 3.15.02-.16c0-1.66-1.34-3-3-3l-.17.01z" />
-                                    </svg>
-                                ) : (
-                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-                                        <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z" />
-                                    </svg>
-                                )}
-                            </button>
-                        </div>
-                        <div style={{ position: 'relative' }}>
-                            <input
-                                type={showConfirmPassword ? "text" : "password"}
-                                value={confirmPassword}
-                                onChange={(e) => setConfirmPassword(e.target.value)}
-                                required
-                                placeholder="Confirm New Password"
-                                style={{
-                                    width: '100%',
-                                    padding: '0.8rem',
-                                    borderRadius: '4px',
-                                    border: 'none',
-                                    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-                                    color: 'white',
-                                    fontSize: '0.9rem',
-                                    outline: 'none',
-                                    boxSizing: 'border-box'
-                                }}
-                            />
-                            <button
-                                type="button"
-                                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                                style={{
-                                    position: 'absolute',
-                                    right: '10px',
-                                    top: '50%',
-                                    transform: 'translateY(-50%)',
-                                    background: 'none',
-                                    border: 'none',
-                                    cursor: 'pointer',
-                                    color: '#ffffff',
-                                    display: 'flex',
-                                    alignItems: 'center'
-                                }}
-                            >
-                                {showConfirmPassword ? (
-                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-                                        <path d="M12 7c2.76 0 5 2.24 5 5 0 .65-.13 1.26-.36 1.83l2.92 2.92c1.51-1.26 2.7-2.89 3.43-4.75-1.73-4.39-6-7.5-11-7.5-1.4 0-2.74.25-4.01.7l2.16 2.16C10.74 7.13 11.35 7 12 7zM2 4.27l2.28 2.28.46.46A11.804 11.804 0 0 0 1 12c1.73 4.39 6 7.5 11 7.5 1.55 0 3.03-.3 4.38-.84l.42.42L19.73 22 21 20.73 3.27 3 2 4.27zM7.53 9.8l1.55 1.55c-.05.21-.08.43-.08.65 0 1.66 1.34 3 3 3 .22 0 .44-.03.65-.08l1.55 1.55c-.67.33-1.41.53-2.2.53-2.76 0-5-2.24-5-5 0-.79.2-1.53.53-2.2zm4.31-.78 3.15 3.15.02-.16c0-1.66-1.34-3-3-3l-.17.01z" />
-                                    </svg>
-                                ) : (
-                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-                                        <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z" />
-                                    </svg>
-                                )}
-                            </button>
-                        </div>
-
-                        <button
-                            type="submit"
-                            disabled={loading}
-                            style={{
-                                marginTop: '0.5rem',
-                                width: '100%',
-                                padding: '0.8rem',
-                                borderRadius: '4px',
-                                border: 'none',
-                                backgroundColor: '#B0D8F5',
-                                color: '#1a1a1a',
-                                fontSize: '0.85rem',
-                                fontWeight: '700',
-                                cursor: 'pointer',
-                                textTransform: 'uppercase',
-                                letterSpacing: '1px',
-                                transition: 'transform 0.2s',
-                                opacity: loading ? 0.8 : 1
-                            }}
-                        >
-                            {loading ? 'Updating...' : 'Update Password'}
-                        </button>
-                    </form>
-                </div>
+                    <div style={{ marginTop: '1.5rem', fontSize: '0.85rem' }}>
+                        <Link to="/login" style={{
+                            color: 'var(--ag-accent)',
+                            textDecoration: 'none',
+                            fontWeight: 700,
+                        }}>← Back to Login</Link>
+                    </div>
+                </motion.div>
             </div>
-
-            <div style={{
-                width: '100vw',
-                padding: '0.8rem 2rem',
-                backgroundColor: '#f5f5f5',
-                borderTop: '1px solid #e0e0e0',
-                display: 'flex',
-                justifyContent: 'flex-end',
-                alignItems: 'center',
-                gap: '2rem',
-                fontSize: '0.7rem',
-                color: '#666',
-                fontFamily: '"Nunito", sans-serif',
-                boxSizing: 'border-box',
-                whiteSpace: 'nowrap',
-                overflowX: 'auto'
-            }}>
-                <span>Copyright © 2025 Xvert. All rights reserved.</span>
-                <span style={{ cursor: 'pointer' }}>Terms of Use</span>
-                <span style={{ cursor: 'pointer' }}>Cookie preferences</span>
-                <span style={{ cursor: 'pointer' }}>Privacy</span>
-                <span style={{ cursor: 'pointer' }}>Do not sell or share my personal information</span>
-            </div>
-        </div>
+        </AntiGravityBackground>
     )
 }

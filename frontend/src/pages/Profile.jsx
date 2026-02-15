@@ -1,6 +1,12 @@
 import { useState, useEffect } from 'react'
+import { motion } from 'framer-motion'
 import { Link } from 'react-router-dom'
 import authService from '../services/AuthService'
+import AntiGravityBackground from '../components/AntiGravityBackground'
+import SkeletonLoader from '../components/SkeletonLoader'
+import { ArrowLeft, User, Mail, Clock } from 'lucide-react'
+
+const springBounce = { type: 'spring', stiffness: 400, damping: 20 }
 
 export default function Profile() {
     const [session, setSession] = useState(null)
@@ -15,38 +21,71 @@ export default function Profile() {
     }, [])
 
     if (loading) {
-        return <div style={{
-            height: '100vh',
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
-            backgroundColor: '#F7F5F0',
-            fontFamily: '"Nunito", sans-serif'
-        }}>Loading...</div>
+        return (
+            <AntiGravityBackground>
+                <div style={{
+                    minHeight: '100vh',
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    padding: '2rem',
+                }}>
+                    <div className="glass-panel" style={{
+                        width: '100%',
+                        maxWidth: '500px',
+                        padding: '2.5rem',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        gap: '1.5rem',
+                    }}>
+                        <SkeletonLoader width="120px" height="120px" borderRadius="50%" />
+                        <SkeletonLoader width="200px" height="1.5rem" />
+                        <SkeletonLoader width="100%" height="3.5rem" count={3} style={{ marginTop: '0.5rem' }} />
+                    </div>
+                </div>
+            </AntiGravityBackground>
+        )
     }
 
     if (!session) {
         return (
-            <div style={{
-                height: '100vh',
-                display: 'flex',
-                justifyContent: 'center',
-                alignItems: 'center',
-                backgroundColor: '#F7F5F0',
-                fontFamily: '"Nunito", sans-serif',
-                flexDirection: 'column',
-                gap: '1rem'
-            }}>
-                <h2>Please log in to view your profile.</h2>
-                <Link to="/login" style={{
-                    backgroundColor: '#B0D8F5',
-                    color: '#1a1a1a',
-                    padding: '0.8rem 2rem',
-                    borderRadius: '30px',
-                    textDecoration: 'none',
-                    fontWeight: 'bold'
-                }}>Login</Link>
-            </div>
+            <AntiGravityBackground>
+                <div style={{
+                    minHeight: '100vh',
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    padding: '2rem',
+                }}>
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="glass-panel"
+                        style={{
+                            padding: '3rem',
+                            textAlign: 'center',
+                            maxWidth: '400px',
+                        }}
+                    >
+                        <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🔒</div>
+                        <h2 style={{ color: 'var(--ag-text)', fontFamily: '"Outfit", sans-serif', marginBottom: '1rem' }}>
+                            Login Required
+                        </h2>
+                        <p style={{ color: 'var(--ag-text-secondary)', marginBottom: '1.5rem' }}>
+                            Please sign in to view your profile
+                        </p>
+                        <Link to="/login">
+                            <motion.button
+                                className="ag-btn-primary"
+                                whileHover={{ scale: 1.04 }}
+                                whileTap={{ scale: 0.96 }}
+                                transition={springBounce}
+                            >Sign In</motion.button>
+                        </Link>
+                    </motion.div>
+                </div>
+            </AntiGravityBackground>
         )
     }
 
@@ -54,101 +93,129 @@ export default function Profile() {
     const avatarUrl = user.user_metadata.avatar_url
     const fullName = user.user_metadata.full_name || user.email.split('@')[0]
 
+    const infoFields = [
+        { icon: User, label: 'Full Name', value: fullName },
+        { icon: Mail, label: 'Email Address', value: user.email },
+        { icon: Clock, label: 'Last Sign In', value: new Date(user.last_sign_in_at).toLocaleString() },
+    ]
+
     return (
-        <div style={{
-            minHeight: '100vh',
-            backgroundColor: '#F7F5F0',
-            fontFamily: '"Nunito", sans-serif',
-            padding: '2rem'
-        }}>
-            <div style={{ maxWidth: '800px', margin: '0 auto' }}>
-                <Link to="/" style={{
-                    textDecoration: 'none',
-                    color: '#457B9D',
-                    fontWeight: 'bold',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '0.5rem',
-                    marginBottom: '2rem'
-                }}>
-                    ← Back to Home
-                </Link>
+        <AntiGravityBackground>
+            <div style={{
+                minHeight: '100vh',
+                padding: '2rem',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+            }}>
+                <div style={{ width: '100%', maxWidth: '600px' }}>
+                    {/* Back link */}
+                    <motion.div
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        style={{ marginBottom: '2rem' }}
+                    >
+                        <Link to="/" style={{
+                            color: 'var(--ag-accent)',
+                            textDecoration: 'none',
+                            fontWeight: 700,
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '0.5rem',
+                            fontSize: '0.9rem',
+                        }}>
+                            <ArrowLeft size={18} /> Back to Home
+                        </Link>
+                    </motion.div>
 
-                <div style={{
-                    backgroundColor: '#fff',
-                    borderRadius: '16px',
-                    padding: '3rem',
-                    boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    gap: '2rem'
-                }}>
-                    <h1 style={{ fontFamily: '"Outfit", sans-serif', color: '#1D3557', margin: 0 }}>My Profile</h1>
+                    {/* Profile Card */}
+                    <motion.div
+                        initial={{ opacity: 0, y: 30, scale: 0.95 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+                        className="glass-panel"
+                        style={{
+                            padding: '3rem',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            gap: '2rem',
+                        }}
+                    >
+                        <h1 style={{
+                            fontFamily: '"Outfit", sans-serif',
+                            color: 'var(--ag-text)',
+                            margin: 0,
+                            fontSize: '1.6rem',
+                        }}>My Profile</h1>
 
-                    <div style={{
-                        width: '120px',
-                        height: '120px',
-                        borderRadius: '50%',
-                        overflow: 'hidden',
-                        border: '4px solid #E8D5B5',
-                        display: 'flex',
-                        justifyContent: 'center',
-                        alignItems: 'center',
-                        backgroundColor: '#f5f5f5',
-                        fontSize: '3rem',
-                        color: '#666'
-                    }}>
-                        {avatarUrl && !imgError ? (
-                            <img
-                                src={avatarUrl}
-                                alt="Profile"
-                                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                                onError={() => setImgError(true)}
-                            />
-                        ) : (
-                            <span>{fullName.charAt(0).toUpperCase()}</span>
-                        )}
-                    </div>
+                        {/* Avatar */}
+                        <motion.div
+                            whileHover={{ scale: 1.05 }}
+                            transition={springBounce}
+                            style={{
+                                width: '120px',
+                                height: '120px',
+                                borderRadius: '50%',
+                                overflow: 'hidden',
+                                border: '3px solid var(--ag-accent)',
+                                boxShadow: '0 0 30px var(--ag-accent-glow)',
+                                display: 'flex',
+                                justifyContent: 'center',
+                                alignItems: 'center',
+                                backgroundColor: 'var(--ag-input-bg)',
+                                fontSize: '3rem',
+                                color: 'var(--ag-text)',
+                                fontWeight: 700,
+                            }}
+                        >
+                            {avatarUrl && !imgError ? (
+                                <img
+                                    src={avatarUrl}
+                                    alt="Profile"
+                                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                    onError={() => setImgError(true)}
+                                />
+                            ) : (
+                                <span>{fullName.charAt(0).toUpperCase()}</span>
+                            )}
+                        </motion.div>
 
-                    <div style={{ width: '100%', maxWidth: '500px' }}>
-                        <div style={{ marginBottom: '1.5rem' }}>
-                            <label style={{ display: 'block', color: '#666', fontSize: '0.9rem', marginBottom: '0.5rem' }}>Full Name</label>
-                            <div style={{
-                                padding: '1rem',
-                                backgroundColor: '#F8F9FA',
-                                borderRadius: '8px',
-                                color: '#333',
-                                fontWeight: '600',
-                                border: '1px solid #eee'
-                            }}>{fullName}</div>
+                        {/* Info Fields */}
+                        <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                            {infoFields.map((field, index) => (
+                                <motion.div
+                                    key={field.label}
+                                    initial={{ opacity: 0, x: -20 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    transition={{ delay: 0.1 + index * 0.08 }}
+                                >
+                                    <label style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '0.5rem',
+                                        color: 'var(--ag-text-secondary)',
+                                        fontSize: '0.85rem',
+                                        marginBottom: '0.4rem',
+                                        fontWeight: 600,
+                                    }}>
+                                        <field.icon size={14} /> {field.label}
+                                    </label>
+                                    <div style={{
+                                        padding: '0.9rem 1rem',
+                                        backgroundColor: 'var(--ag-input-bg)',
+                                        borderRadius: '12px',
+                                        color: 'var(--ag-text)',
+                                        fontWeight: 600,
+                                        border: '1px solid var(--ag-glass-border)',
+                                        backdropFilter: 'blur(8px)',
+                                    }}>{field.value}</div>
+                                </motion.div>
+                            ))}
                         </div>
-
-                        <div style={{ marginBottom: '1.5rem' }}>
-                            <label style={{ display: 'block', color: '#666', fontSize: '0.9rem', marginBottom: '0.5rem' }}>Email Address</label>
-                            <div style={{
-                                padding: '1rem',
-                                backgroundColor: '#F8F9FA',
-                                borderRadius: '8px',
-                                color: '#333',
-                                fontWeight: '600',
-                                border: '1px solid #eee'
-                            }}>{user.email}</div>
-                        </div>
-
-                        <div style={{ marginBottom: '1.5rem' }}>
-                            <label style={{ display: 'block', color: '#666', fontSize: '0.9rem', marginBottom: '0.5rem' }}>Last Sign In</label>
-                            <div style={{
-                                padding: '1rem',
-                                backgroundColor: '#F8F9FA',
-                                borderRadius: '8px',
-                                color: '#333',
-                                border: '1px solid #eee'
-                            }}>{new Date(user.last_sign_in_at).toLocaleString()}</div>
-                        </div>
-                    </div>
+                    </motion.div>
                 </div>
             </div>
-        </div>
+        </AntiGravityBackground>
     )
 }
