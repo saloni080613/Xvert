@@ -6,14 +6,16 @@ import historyService from '../services/HistoryService'
 import ToolIcon from '../components/ToolIcon'
 import AntiGravityBackground from '../components/AntiGravityBackground'
 import SkeletonLoader from '../components/SkeletonLoader'
-import { ArrowLeft, Download } from 'lucide-react'
+import { ArrowLeft, Download, Trash2, FileCheck, AlertCircle, Clock } from 'lucide-react'
 
 const springBounce = { type: 'spring', stiffness: 400, damping: 20 }
 
 export default function History() {
     const [session, setSession] = useState(null)
     const [loading, setLoading] = useState(true)
-    const [historyFiles, setHistoryFiles] = useState([])
+    const [conversions, setConversions] = useState([])
+    const [downloadingId, setDownloadingId] = useState(null)
+    const [deletingId, setDeletingId] = useState(null)
 
     useEffect(() => {
         authService.getSession().then(({ data: { session } }) => {
@@ -29,25 +31,70 @@ export default function History() {
     const fetchHistory = async () => {
         try {
             const data = await historyService.getHistory()
-            setHistoryFiles(data.files || [])
+            setConversions(data)
         } catch (error) {
-            console.error(error)
+            console.error('Failed to fetch history:', error)
         } finally {
             setLoading(false)
         }
     }
 
-    const getDownloadUrl = (filename) => {
-        return `http://localhost:8000/api/convert/history/${filename}`
+    const handleDownload = async (conversion) => {
+        setDownloadingId(conversion.id)
+        try {
+            const { download_url, filename } = await historyService.getDownloadUrl(conversion.id)
+            // Trigger browser download
+            const link = document.createElement('a')
+            link.href = download_url
+            link.download = `${conversion.original_filename?.split('.')[0] || 'converted'}.${conversion.converted_format}`
+            link.target = '_blank'
+            document.body.appendChild(link)
+            link.click()
+            document.body.removeChild(link)
+        } catch (error) {
+            console.error('Download failed:', error)
+        } finally {
+            setDownloadingId(null)
+        }
     }
 
-    const formatDate = (timestamp) => {
-        return new Date(timestamp * 1000).toLocaleString()
+    const handleDelete = async (conversionId) => {
+        setDeletingId(conversionId)
+        try {
+            await historyService.deleteConversion(conversionId)
+            setConversions(prev => prev.filter(c => c.id !== conversionId))
+        } catch (error) {
+            console.error('Delete failed:', error)
+        } finally {
+            setDeletingId(null)
+        }
     }
 
-    const getMockTool = (filename) => {
-        const ext = filename.split('.').pop().toLowerCase()
-        return { id: 'history-file', type: 'file', target: ext }
+    const formatDate = (isoString) => {
+        if (!isoString) return '—'
+        return new Date(isoString).toLocaleString()
+    }
+
+    const formatSize = (bytes) => {
+        if (!bytes) return '—'
+        if (bytes < 1024) return `${bytes} B`
+        if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+        return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+    }
+
+    const getStatusConfig = (status) => {
+        switch (status) {
+            case 'completed':
+                return { icon: FileCheck, color: '#22c55e', label: 'Completed' }
+            case 'failed':
+                return { icon: AlertCircle, color: '#ef4444', label: 'Failed' }
+            default:
+                return { icon: Clock, color: '#f59e0b', label: 'Pending' }
+        }
+    }
+
+    const getMockTool = (record) => {
+        return { id: 'history-file', type: 'file', target: record.converted_format }
     }
 
     // Loading skeleton
@@ -145,8 +192,8 @@ export default function History() {
                             fontSize: '1.6rem',
                         }}>Conversion History</h1>
 
-                        {historyFiles.length === 0 ? (
-                            /* Empty State with Astronaut */
+                        {conversions.length === 0 ? (
+                            /* Empty State */
                             <motion.div
                                 initial={{ opacity: 0, y: 20 }}
                                 animate={{ opacity: 1, y: 0 }}
@@ -163,17 +210,13 @@ export default function History() {
                                     transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut' }}
                                     style={{
                                         width: '160px', height: '160px', margin: '0 auto',
-                                        borderRadius: '22px',
-                                        background: 'linear-gradient(135deg, #1e1040, #2d1b69)',
                                         display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                        overflow: 'hidden',
-                                        boxShadow: '0 8px 25px rgba(124,58,237,0.2)',
                                     }}
                                 >
                                     <img
                                         src="/illustrations/emty_history.png"
                                         alt="No history yet"
-                                        style={{ width: '85%', height: 'auto', mixBlendMode: 'screen' }}
+                                        style={{ width: '100%', height: 'auto' }}
                                     />
                                 </motion.div>
                                 <h3 style={{
@@ -189,74 +232,126 @@ export default function History() {
                         ) : (
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                                 <AnimatePresence>
-                                    {historyFiles.map((file, index) => (
-                                        <motion.div
-                                            key={file.name + index}
-                                            initial={{ opacity: 0, y: 15 }}
-                                            animate={{ opacity: 1, y: 0 }}
-                                            transition={{ delay: index * 0.05 }}
-                                            whileHover={{
-                                                y: -2,
-                                                boxShadow: '0 8px 25px var(--ag-glass-shadow)',
-                                            }}
-                                            style={{
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                justifyContent: 'space-between',
-                                                padding: '1rem 1.2rem',
-                                                backgroundColor: 'var(--ag-card-bg)',
-                                                border: '1px solid var(--ag-card-border)',
-                                                borderRadius: '14px',
-                                                backdropFilter: 'blur(8px)',
-                                                transition: 'box-shadow 0.3s',
-                                                gap: '1rem',
-                                            }}
-                                        >
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flex: 1, minWidth: 0 }}>
-                                                <div style={{ transform: 'scale(0.75)', flexShrink: 0 }}>
-                                                    <ToolIcon tool={getMockTool(file.name)} />
-                                                </div>
-                                                <div style={{ minWidth: 0 }}>
-                                                    <div style={{
-                                                        fontWeight: 700,
-                                                        color: 'var(--ag-text)',
-                                                        marginBottom: '0.2rem',
-                                                        overflow: 'hidden',
-                                                        textOverflow: 'ellipsis',
-                                                        whiteSpace: 'nowrap',
-                                                    }}>{file.name}</div>
-                                                    <div style={{
-                                                        fontSize: '0.8rem',
-                                                        color: 'var(--ag-text-secondary)',
-                                                    }}>
-                                                        {(file.size / 1024).toFixed(1)} KB • {formatDate(file.created_at)}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <motion.a
-                                                href={getDownloadUrl(file.name)}
-                                                download
-                                                whileHover={{ scale: 1.08 }}
-                                                whileTap={{ scale: 0.95 }}
-                                                transition={springBounce}
+                                    {conversions.map((record, index) => {
+                                        const statusConfig = getStatusConfig(record.status)
+                                        const StatusIcon = statusConfig.icon
+                                        return (
+                                            <motion.div
+                                                key={record.id}
+                                                initial={{ opacity: 0, y: 15 }}
+                                                animate={{ opacity: 1, y: 0 }}
+                                                exit={{ opacity: 0, x: -100 }}
+                                                transition={{ delay: index * 0.05 }}
+                                                whileHover={{
+                                                    y: -2,
+                                                    boxShadow: '0 8px 25px var(--ag-glass-shadow)',
+                                                }}
                                                 style={{
-                                                    background: 'var(--ag-btn-primary)',
-                                                    color: '#fff',
-                                                    padding: '0.5rem 1.2rem',
-                                                    borderRadius: '10px',
-                                                    textDecoration: 'none',
-                                                    fontWeight: 700,
-                                                    fontSize: '0.85rem',
-                                                    display: 'inline-flex',
+                                                    display: 'flex',
                                                     alignItems: 'center',
-                                                    gap: '0.4rem',
-                                                    flexShrink: 0,
+                                                    justifyContent: 'space-between',
+                                                    padding: '1rem 1.2rem',
+                                                    backgroundColor: 'var(--ag-card-bg)',
+                                                    border: '1px solid var(--ag-card-border)',
+                                                    borderRadius: '14px',
+                                                    backdropFilter: 'blur(8px)',
+                                                    transition: 'box-shadow 0.3s',
+                                                    gap: '1rem',
                                                 }}
                                             >
-                                                <Download size={14} /> Download
-                                            </motion.a>
-                                        </motion.div>
-                                    ))}
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flex: 1, minWidth: 0 }}>
+                                                    <div style={{ transform: 'scale(0.75)', flexShrink: 0 }}>
+                                                        <ToolIcon tool={getMockTool(record)} />
+                                                    </div>
+                                                    <div style={{ minWidth: 0 }}>
+                                                        <div style={{
+                                                            fontWeight: 700,
+                                                            color: 'var(--ag-text)',
+                                                            marginBottom: '0.2rem',
+                                                            overflow: 'hidden',
+                                                            textOverflow: 'ellipsis',
+                                                            whiteSpace: 'nowrap',
+                                                        }}>{record.original_filename}</div>
+                                                        <div style={{
+                                                            fontSize: '0.8rem',
+                                                            color: 'var(--ag-text-secondary)',
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            gap: '0.5rem',
+                                                            flexWrap: 'wrap',
+                                                        }}>
+                                                            <span style={{
+                                                                background: 'var(--ag-input-bg)',
+                                                                padding: '0.1rem 0.4rem',
+                                                                borderRadius: '6px',
+                                                                fontWeight: 600,
+                                                                textTransform: 'uppercase',
+                                                                fontSize: '0.7rem',
+                                                            }}>
+                                                                {record.original_format} → {record.converted_format}
+                                                            </span>
+                                                            <span>{formatSize(record.file_size_original)}</span>
+                                                            <span>•</span>
+                                                            <span>{formatDate(record.created_at)}</span>
+                                                            <StatusIcon size={13} color={statusConfig.color} />
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                {/* Action Buttons */}
+                                                <div style={{ display: 'flex', gap: '0.5rem', flexShrink: 0 }}>
+                                                    {record.status === 'completed' && (
+                                                        <motion.button
+                                                            onClick={() => handleDownload(record)}
+                                                            disabled={downloadingId === record.id}
+                                                            whileHover={{ scale: 1.08 }}
+                                                            whileTap={{ scale: 0.95 }}
+                                                            transition={springBounce}
+                                                            style={{
+                                                                background: 'var(--ag-btn-primary)',
+                                                                color: '#fff',
+                                                                padding: '0.5rem 1rem',
+                                                                borderRadius: '10px',
+                                                                border: 'none',
+                                                                fontWeight: 700,
+                                                                fontSize: '0.85rem',
+                                                                display: 'inline-flex',
+                                                                alignItems: 'center',
+                                                                gap: '0.4rem',
+                                                                cursor: downloadingId === record.id ? 'wait' : 'pointer',
+                                                                opacity: downloadingId === record.id ? 0.7 : 1,
+                                                            }}
+                                                        >
+                                                            <Download size={14} />
+                                                            {downloadingId === record.id ? '...' : 'Download'}
+                                                        </motion.button>
+                                                    )}
+                                                    <motion.button
+                                                        onClick={() => handleDelete(record.id)}
+                                                        disabled={deletingId === record.id}
+                                                        whileHover={{ scale: 1.08 }}
+                                                        whileTap={{ scale: 0.95 }}
+                                                        transition={springBounce}
+                                                        style={{
+                                                            background: 'transparent',
+                                                            color: 'var(--ag-text-secondary)',
+                                                            padding: '0.5rem',
+                                                            borderRadius: '10px',
+                                                            border: '1px solid var(--ag-glass-border)',
+                                                            display: 'inline-flex',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center',
+                                                            cursor: deletingId === record.id ? 'wait' : 'pointer',
+                                                            opacity: deletingId === record.id ? 0.5 : 1,
+                                                        }}
+                                                        title="Delete"
+                                                    >
+                                                        <Trash2 size={14} />
+                                                    </motion.button>
+                                                </div>
+                                            </motion.div>
+                                        )
+                                    })}
                                 </AnimatePresence>
                             </div>
                         )}

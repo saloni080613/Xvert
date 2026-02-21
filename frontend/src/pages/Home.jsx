@@ -34,7 +34,7 @@ const CATEGORIES = [
 ]
 
 function getCategoryForTool(tool) {
-    if (['pdf', 'docx', 'merge', 'image'].includes(tool.type)) return 'document'
+    if (['pdf', 'docx', 'merge', 'image', 'ocr'].includes(tool.type)) return 'document'
     if (['jpg', 'png', 'gif'].includes(tool.type)) return 'image'
     if (tool.type === 'data') return 'data'
     return 'other'
@@ -277,6 +277,7 @@ export default function Home() {
         { id: 'docx-to-pdf', name: 'Word to PDF', desc: 'Convert DOCX files to PDF documents.', icon: '📝', type: 'docx', target: 'pdf' },
         { id: 'image-to-pdf', name: 'Image to PDF', desc: 'Convert JPG, PNG, or GIF images into PDF documents.', icon: '🖼️', type: 'image', target: 'pdf' },
         { id: 'merge-pdf', name: 'Merge PDF', desc: 'Combine multiple PDFs into one unified document.', icon: '🔗', type: 'merge', target: 'pdf' },
+        { id: 'ocr-pdf', name: 'OCR PDF', desc: 'Extract editable text from scanned PDFs using OCR.', icon: '🔍', type: 'ocr', target: 'docx' },
         { id: 'pdf-to-jpg', name: 'PDF to JPG', desc: 'Convert PDF pages to JPG images.', icon: 'fz', type: 'pdf', target: 'jpg' },
         { id: 'pdf-to-png', name: 'PDF to PNG', desc: 'Convert PDF pages to PNG images.', icon: 'fz', type: 'pdf', target: 'png' },
         // Image Tools
@@ -322,6 +323,7 @@ export default function Home() {
     const getAcceptTypes = (tool) => {
         if (!tool) return '*'
         if (tool.id === 'merge-pdf') return '.pdf'
+        if (tool.type === 'ocr') return '.pdf'
         if (tool.type === 'pdf') return '.pdf'
         if (tool.type === 'image') return '.jpg,.jpeg,.png,.gif'
         if (tool.type === 'jpg') return '.jpg,.jpeg'
@@ -434,6 +436,8 @@ export default function Home() {
                 resultBlob = await conversionService.convertDocument(file, 'pdf', selectedTool.target)
             } else if (selectedTool.type === 'image' || selectedTool.type === 'jpg' || selectedTool.type === 'png' || selectedTool.type === 'gif') {
                 resultBlob = await conversionService.convertImage(file, selectedTool.target)
+            } else if (selectedTool.type === 'ocr') {
+                resultBlob = await conversionService.ocrPdf(file)
             } else if (selectedTool.type === 'docx') {
                 resultBlob = await conversionService.convertDocument(file, 'docx', 'pdf')
             } else if (selectedTool.type === 'data') {
@@ -518,17 +522,13 @@ export default function Home() {
                                 transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut' }}
                                 style={{
                                     width: '200px', height: '200px', flexShrink: 0,
-                                    borderRadius: '24px',
-                                    background: 'linear-gradient(135deg, #1e1040 0%, #2d1b69 60%, #3b1f8e 100%)',
                                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                    overflow: 'hidden',
-                                    boxShadow: '0 12px 40px rgba(124,58,237,0.25)',
                                 }}
                             >
                                 <img
                                     src="/illustrations/home_hero.png"
                                     alt="Astronaut juggling file types"
-                                    style={{ width: '90%', height: 'auto', mixBlendMode: 'screen', filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.3))' }}
+                                    style={{ width: '100%', height: 'auto', filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.3))' }}
                                 />
                             </motion.div>
                             <motion.div
@@ -598,11 +598,6 @@ export default function Home() {
                                                 fontFamily: '"Outfit", sans-serif', fontWeight: 700,
                                                 fontSize: '1rem', color: 'var(--ag-text)',
                                             }}>Smart Router</span>
-                                            <span style={{
-                                                fontSize: '0.75rem', color: 'var(--ag-text-secondary)',
-                                                padding: '2px 8px', borderRadius: '6px',
-                                                background: 'var(--ag-input-bg)', fontWeight: 600,
-                                            }}>NEW</span>
                                         </div>
                                         <p style={{
                                             fontSize: '0.85rem', color: 'var(--ag-text-secondary)',
@@ -916,13 +911,9 @@ export default function Home() {
                                 >
                                     <div style={{
                                         width: '150px', height: '150px', margin: '0 auto 0.75rem',
-                                        borderRadius: '20px',
-                                        background: 'linear-gradient(135deg, #1e1040, #2d1b69)',
                                         display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                        overflow: 'hidden',
-                                        boxShadow: '0 8px 25px rgba(124,58,237,0.2)',
                                     }}>
-                                        <img src="/illustrations/404.png" alt="Not found" style={{ width: '85%', height: 'auto', mixBlendMode: 'screen' }} />
+                                        <img src="/illustrations/404.png" alt="Not found" style={{ width: '100%', height: 'auto' }} />
                                     </div>
                                     <p style={{ fontWeight: 600, fontSize: '1.1rem' }}>No tools match "{searchQuery}"</p>
                                     <p style={{ fontSize: '0.85rem' }}>Try a different search term or category</p>
@@ -993,17 +984,13 @@ export default function Home() {
                                         top: '-40px',
                                         right: '20px',
                                         width: '110px', height: '110px',
-                                        borderRadius: '20px',
-                                        background: 'linear-gradient(135deg, #1e1040, #2d1b69)',
                                         display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                        overflow: 'hidden',
-                                        boxShadow: '0 8px 25px rgba(124,58,237,0.25)',
                                     }}
                                 >
                                     <img
                                         src="/illustrations/conversion.png"
                                         alt="Astronaut converting"
-                                        style={{ width: '90%', height: 'auto', mixBlendMode: 'screen' }}
+                                        style={{ width: '100%', height: 'auto' }}
                                     />
                                 </motion.div>
 

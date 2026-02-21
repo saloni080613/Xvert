@@ -103,7 +103,7 @@ export default function MegaMenu({ tools, activeMenu, onToolSelect, onClose }) {
                             <span>{category.title}</span>
                         </div>
 
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
                             {category.tools.map(tool => (
                                 <motion.div
                                     key={tool.id}
@@ -119,7 +119,7 @@ export default function MegaMenu({ tools, activeMenu, onToolSelect, onClose }) {
                                         gap: '0.8rem',
                                         cursor: 'pointer',
                                         color: 'var(--ag-text-secondary)',
-                                        padding: '0.35rem 0.5rem',
+                                        padding: '0.55rem 0.5rem',
                                         borderRadius: '8px',
                                         transition: 'background 0.2s',
                                         fontSize: '0.9rem',
