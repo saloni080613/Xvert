@@ -89,6 +89,43 @@
   --ag-skeleton-shine: rgba(179, 136, 255, 0.18);
 }
 
+/* ---- Warm Sand Theme ---- /* Warm Sand theme addition */
+[data-theme="warm-sand"] {
+  --ag-bg-start: #f5f0e8;
+  --ag-bg-mid: #ece6db;
+  --ag-bg-end: #e4ddd2;
+  --ag-glass-bg: rgba(250, 247, 244, 0.6);
+  --ag-glass-border: #dfd8cc;
+  --ag-glass-shadow: rgba(176, 96, 64, 0.1);
+  --ag-text: #201c14;
+  --ag-text-secondary: #90806a;
+  --ag-accent: #b06040;
+  --ag-accent-glow: rgba(176, 96, 64, 0.4);
+  --ag-card-bg: #faf7f4;
+  --ag-card-border: #e0d8cc;
+  --ag-card-hover-border: #954f32;
+  --ag-orb1: rgba(176, 96, 64, 0.15);
+  --ag-orb2: rgba(216, 160, 128, 0.12);
+  --ag-orb3: rgba(149, 79, 50, 0.1);
+  --ag-orb4: rgba(200, 184, 168, 0.12);
+  --ag-shard-bg: rgba(250, 247, 244, 0.5);
+  --ag-shard-border: #e0d8cc;
+  --ag-navbar-bg: rgba(245, 240, 232, 0.8);
+  --ag-navbar-border: #dfd8cc;
+  --ag-input-bg: #ece6db;
+  --ag-dropzone-bg: rgba(176, 96, 64, 0.06);
+  --ag-dropzone-border: rgba(176, 96, 64, 0.3);
+  --ag-dropzone-active: rgba(176, 96, 64, 0.15);
+  --ag-btn-primary: linear-gradient(135deg, #b06040, #d8a080);
+  --ag-btn-secondary: rgba(176, 96, 64, 0.1);
+  --ag-btn-secondary-text: #201c14;
+  --ag-btn-primary-text: #f5f0e8;
+  --ag-icon-glow: rgba(176, 96, 64, 0.5);
+  --ag-megamenu-bg: rgba(245, 240, 232, 0.95);
+  --ag-skeleton-base: rgba(176, 96, 64, 0.08);
+  --ag-skeleton-shine: rgba(176, 96, 64, 0.15);
+}
+
 /* ---- Reset ---- */
 *, *::before, *::after {
   box-sizing: border-box;

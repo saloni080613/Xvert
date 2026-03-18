@@ -1,111 +1,130 @@
-import { motion } from 'framer-motion'
 import { Sun, Moon } from 'lucide-react'
 import { useTheme } from './ThemeContext'
 
 export default function DarkModeToggle() {
-    const { theme, toggleTheme } = useTheme()
+    const { theme, setTheme } = useTheme()
+    
+    // Warm Sand theme addition
+    const isLight = theme === 'light'
     const isDark = theme === 'dark'
+    const isWarm = theme === 'warm-sand'
+
+    const handleKeyboard = (e, newTheme) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault()
+            setTheme(newTheme)
+        }
+    }
 
     return (
         <div style={{
             display: 'flex',
             alignItems: 'center',
-            gap: '0.75rem',
+            background: 'var(--ag-input-bg)',
+            padding: '4px',
+            borderRadius: '24px',
+            border: '1px solid var(--ag-glass-border)',
+            position: 'relative',
+            boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.05)'
         }}>
-            <Sun
-                size={18}
+            {/* Sliding Highlight Background */}
+            <div
                 style={{
-                    color: isDark ? 'var(--ag-text-secondary)' : 'var(--ag-accent)',
-                    transition: 'color 0.3s',
-                    filter: isDark ? 'none' : 'drop-shadow(0 0 4px var(--ag-icon-glow))',
+                    position: 'absolute',
+                    top: '4px',
+                    left: '4px',
+                    width: '32px',
+                    height: '32px',
+                    borderRadius: '50%',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+                    zIndex: 0,
+                    transform: `translateX(${isLight ? 0 : isDark ? 32 : 64}px)`,
+                    background: isLight 
+                        ? 'linear-gradient(135deg, #ffd54f, #ffb300)'
+                        : isDark
+                        ? 'linear-gradient(135deg, #b388ff, #7c4dff)'
+                        : 'linear-gradient(135deg, #e4ddd2, #d8a080)',
+                    transition: 'transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), background 0.4s ease'
                 }}
             />
 
-            {/* Toggle track */}
+            {/* Light Mode Button */}
             <div
-                onClick={toggleTheme}
+                role="button"
+                tabIndex={0}
+                onClick={() => setTheme('light')}
+                onKeyDown={(e) => handleKeyboard(e, 'light')}
+                title="Light Theme"
                 style={{
-                    width: '52px',
-                    height: '28px',
-                    borderRadius: '14px',
-                    background: isDark
-                        ? 'linear-gradient(135deg, #1a1a3e, #2d1b69)'
-                        : 'linear-gradient(135deg, #ffd54f, #ffb300)',
+                    width: '32px',
+                    height: '32px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
                     cursor: 'pointer',
                     position: 'relative',
-                    border: '1px solid',
-                    borderColor: isDark ? 'rgba(179,136,255,0.3)' : 'rgba(255,179,0,0.4)',
-                    boxShadow: isDark
-                        ? '0 0 15px rgba(179,136,255,0.2), inset 0 0 10px rgba(0,0,0,0.3)'
-                        : '0 0 15px rgba(255,179,0,0.2), inset 0 0 10px rgba(255,255,255,0.3)',
-                    transition: 'background 0.3s, border-color 0.3s, box-shadow 0.3s',
+                    zIndex: 1,
+                    color: isLight ? '#fff' : 'var(--ag-text-secondary)',
+                    transition: 'color 0.3s'
                 }}
             >
-                {/* Thumb */}
-                <motion.div
-                    layout
-                    style={{
-                        position: 'absolute',
-                        top: '2px',
-                        width: '22px',
-                        height: '22px',
-                        borderRadius: '50%',
-                        background: isDark
-                            ? 'linear-gradient(135deg, #b388ff, #7c4dff)'
-                            : 'linear-gradient(135deg, #fff, #ffecd2)',
-                        boxShadow: isDark
-                            ? '0 0 10px rgba(179,136,255,0.5)'
-                            : '0 0 10px rgba(255,179,0,0.4)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                    }}
-                    animate={{
-                        left: isDark ? '26px' : '2px',
-                        rotate: isDark ? 360 : 0,
-                    }}
-                    transition={{
-                        type: 'spring',
-                        stiffness: 500,
-                        damping: 30,
-                    }}
-                >
-                    {/* Star dots in dark mode thumb */}
-                    {isDark && (
-                        <>
-                            <div style={{
-                                position: 'absolute',
-                                width: '3px',
-                                height: '3px',
-                                borderRadius: '50%',
-                                background: '#fff',
-                                top: '5px',
-                                left: '5px',
-                                opacity: 0.8,
-                            }} />
-                            <div style={{
-                                position: 'absolute',
-                                width: '2px',
-                                height: '2px',
-                                borderRadius: '50%',
-                                background: '#fff',
-                                bottom: '6px',
-                                right: '4px',
-                                opacity: 0.6,
-                            }} />
-                        </>
-                    )}
-                </motion.div>
+                <Sun size={16} />
             </div>
 
-            <Moon
-                size={18}
+            {/* Dark Mode Button */}
+            <div
+                role="button"
+                tabIndex={0}
+                onClick={() => setTheme('dark')}
+                onKeyDown={(e) => handleKeyboard(e, 'dark')}
+                title="Dark Theme"
                 style={{
-                    color: isDark ? 'var(--ag-accent)' : 'var(--ag-text-secondary)',
-                    transition: 'color 0.3s',
-                    filter: isDark ? 'drop-shadow(0 0 4px var(--ag-icon-glow))' : 'none',
+                    width: '32px',
+                    height: '32px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: 'pointer',
+                    position: 'relative',
+                    zIndex: 1,
+                    color: isDark ? '#fff' : 'var(--ag-text-secondary)',
+                    transition: 'color 0.3s'
                 }}
-            />
+            >
+                <Moon size={16} />
+            </div>
+
+            {/* Warm Sand Mode Button */}
+            <div
+                role="button"
+                tabIndex={0}
+                onClick={() => setTheme('warm-sand')}
+                onKeyDown={(e) => handleKeyboard(e, 'warm-sand')}
+                title="Warm Sand Theme"
+                style={{
+                    width: '32px',
+                    height: '32px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: 'pointer',
+                    position: 'relative',
+                    zIndex: 1,
+                    transition: 'all 0.3s'
+                }}
+            >
+                <div 
+                    style={{
+                        width: '14px',
+                        height: '14px',
+                        borderRadius: '50%',
+                        background: '#c8a880',
+                        opacity: isWarm ? 1 : 0.6,
+                        boxShadow: isWarm ? '0 0 6px rgba(255,255,255,0.5)' : 'none',
+                        transition: 'all 0.3s'
+                    }}
+                />
+            </div>
         </div>
     )
 }

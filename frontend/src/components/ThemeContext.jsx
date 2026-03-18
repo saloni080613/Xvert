@@ -13,12 +13,14 @@ export function ThemeProvider({ children }) {
         localStorage.setItem('xvert-theme', theme)
     }, [theme])
 
+    // Warm Sand theme addition
+    // Warm Sand theme addition
     const toggleTheme = () => {
-        setTheme(prev => prev === 'light' ? 'dark' : 'light')
+        setTheme(prev => prev === 'light' ? 'dark' : prev === 'dark' ? 'warm-sand' : 'light')
     }
 
     return (
-        <ThemeContext.Provider value={{ theme, toggleTheme }}>
+        <ThemeContext.Provider value={{ theme, toggleTheme, setTheme }}>
             {children}
         </ThemeContext.Provider>
     )

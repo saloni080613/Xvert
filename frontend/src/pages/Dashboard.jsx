@@ -6,6 +6,9 @@ import conversionService from '../services/ConversionService'
 import UserAvatar from '../components/UserAvatar'
 import ToolIcon from '../components/ToolIcon'
 import Navbar from '../components/Navbar'
+import DropboxPicker from '../components/DropboxPicker'
+import GoogleDrivePicker from '../components/GoogleDrivePicker'
+import OneDrivePicker from '../components/OneDrivePicker'
 
 export default function Dashboard() {
     const navigate = useNavigate()
@@ -111,6 +114,31 @@ export default function Dashboard() {
 
     const handleRemoveFile = (index) => {
         setFiles(prev => prev.filter((_, i) => i !== index))
+    }
+
+    const handleDropboxSelect = (filesInfo) => {
+        setDownloadUrl(null)
+        if (selectedTool?.id === 'merge-pdf') {
+            const urls = filesInfo.map(f => f.url) // dropins.choose returns an array of file objects
+            setFiles(prev => [...prev, ...urls.map((url, i) => ({
+                name: filesInfo[i].name,
+                url: url,
+                isCloudUrl: true
+            }))])
+            setFile(null)
+            setMessage('')
+        } else {
+            const fileInfo = filesInfo[0]
+            if (fileInfo) {
+                setFile({
+                    name: fileInfo.name,
+                    url: fileInfo.url,
+                    isCloudUrl: true
+                })
+                setMessage('')
+            }
+            setFiles([])
+        }
     }
 
     const handleToolSelect = (tool) => {
@@ -323,11 +351,13 @@ export default function Dashboard() {
                             <div style={{
                                 border: '2px dashed #A8DADC',
                                 borderRadius: '15px',
-                                padding: '3rem',
+                                padding: '2.5rem 2rem',
                                 backgroundColor: '#f9f9f9',
                                 marginBottom: '2rem',
                                 position: 'relative',
-                                transition: 'all 0.3s ease'
+                                transition: 'all 0.3s ease',
+                                maxWidth: '500px',
+                                margin: '0 auto 2rem'
                             }}
 
                                 onDragOver={(e) => {
@@ -396,20 +426,57 @@ export default function Dashboard() {
                                         <p style={{ fontSize: '0.9rem', color: '#666' }}>Click to change file</p>
                                     </div>
                                 ) : (
-                                    <div>
+                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1.5rem', paddingTop: '0.5rem' }}>
+                                        {/* Select File Button - Large and Prominent */}
                                         <div style={{
                                             backgroundColor: '#A8DADC',
                                             color: '#1D3557',
-                                            padding: '0.8rem 2rem',
-                                            borderRadius: '50px',
-                                            display: 'inline-block',
+                                            padding: '1rem 3rem',
+                                            borderRadius: '60px',
+                                            display: 'inline-flex',
+                                            alignItems: 'center',
                                             fontWeight: 'bold',
-                                            marginBottom: '1rem',
-                                            cursor: 'pointer'
+                                            cursor: 'pointer',
+                                            fontSize: '1.05rem',
+                                            boxShadow: '0 4px 15px rgba(203, 185, 164, 0.3)',
+                                            transition: 'all 0.2s'
+                                        }}
+                                        onMouseOver={(e) => {
+                                            e.currentTarget.style.transform = 'scale(1.05)';
+                                            e.currentTarget.style.boxShadow = '0 8px 25px rgba(203, 185, 164, 0.4)';
+                                        }}
+                                        onMouseOut={(e) => {
+                                            e.currentTarget.style.transform = 'scale(1)';
+                                            e.currentTarget.style.boxShadow = '0 4px 15px rgba(203, 185, 164, 0.3)';
                                         }}>
                                             Select {selectedTool.type === 'image' ? 'Image' : selectedTool.id === 'merge-pdf' ? 'PDFs' : 'File'}
                                         </div>
-                                        <p style={{ color: '#666', fontSize: '0.9rem' }}>or drag and drop here</p>
+
+                                        {/* Cloud Storage Icons - Below Button */}
+                                        <div style={{ display: 'flex', gap: '1.2rem', alignItems: 'center', justifyContent: 'center' }}>
+                                            {/* Divider Above Icons */}
+                                            <div style={{ width: '60px', height: '2px', background: 'linear-gradient(90deg, transparent, #ddd)', opacity: 0.5 }} />
+                                            
+                                            <DropboxPicker
+                                                onFileSelected={handleDropboxSelect}
+                                                acceptTypes={getAcceptTypes(selectedTool)}
+                                                multiselect={selectedTool.id === 'merge-pdf'}
+                                            />
+                                            <GoogleDrivePicker
+                                                onFileSelected={handleDropboxSelect}
+                                                acceptTypes={getAcceptTypes(selectedTool)}
+                                                multiselect={selectedTool.id === 'merge-pdf'}
+                                            />
+                                            <OneDrivePicker
+                                                onFileSelected={handleDropboxSelect}
+                                                acceptTypes={getAcceptTypes(selectedTool)}
+                                                multiselect={selectedTool.id === 'merge-pdf'}
+                                            />
+                                            
+                                            <div style={{ width: '60px', height: '2px', background: 'linear-gradient(90deg, #ddd, transparent)', opacity: 0.5 }} />
+                                        </div>
+
+                                        <p style={{ color: '#666', fontSize: '0.9rem', margin: 0 }}>or drag and drop here</p>
                                     </div>
                                 )}
                             </div>
@@ -418,33 +485,60 @@ export default function Dashboard() {
 
 
                             {downloadUrl ? (
-                                <button
-                                    onClick={() => {
-                                        const link = document.createElement('a');
-                                        link.href = downloadUrl;
-                                        link.setAttribute('download', `converted_${selectedTool.target === 'pdf' ? 'document' : (files.length > 0 ? 'merged' : file.name.split('.')[0])}.${selectedTool.target}`);
-                                        document.body.appendChild(link);
-                                        link.click();
-                                        link.remove();
-                                    }}
-                                    style={{
-                                        backgroundColor: '#CBB9A4', // Beige
-                                        color: '#1D3557', // Navy text
-                                        padding: '1rem 3rem',
-                                        borderRadius: '50px',
-                                        border: 'none',
-                                        fontSize: '1.2rem',
-                                        fontWeight: 'bold',
-                                        cursor: 'pointer',
-                                        boxShadow: '0 4px 15px rgba(203, 185, 164, 0.4)',
-                                        transition: 'all 0.2s',
-                                        animation: 'pulse 2s infinite'
-                                    }}
-                                    onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
-                                    onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1)'}
-                                >
-                                    Download
-                                </button>
+                                <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', marginTop: '1rem' }}>
+                                    <button
+                                        onClick={() => {
+                                            const link = document.createElement('a');
+                                            link.href = downloadUrl;
+                                            link.setAttribute('download', `converted_${selectedTool.target === 'pdf' ? 'document' : (files.length > 0 ? 'merged' : file.name.split('.')[0])}.${selectedTool.target}`);
+                                            document.body.appendChild(link);
+                                            link.click();
+                                            link.remove();
+                                        }}
+                                        style={{
+                                            backgroundColor: '#CBB9A4', // Beige
+                                            color: '#1D3557', // Navy text
+                                            padding: '1rem 2rem',
+                                            borderRadius: '50px',
+                                            border: 'none',
+                                            fontSize: '1.1rem',
+                                            fontWeight: 'bold',
+                                            cursor: 'pointer',
+                                            boxShadow: '0 4px 15px rgba(203, 185, 164, 0.4)',
+                                            transition: 'all 0.2s',
+                                        }}
+                                        onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
+                                        onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                                    >
+                                        Download Local
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            if (window.Dropbox) {
+                                                const filename = `converted_${selectedTool.target === 'pdf' ? 'document' : (files.length > 0 ? 'merged' : file.name.split('.')[0])}.${selectedTool.target}`;
+                                                window.Dropbox.save(downloadUrl, filename);
+                                            } else {
+                                                alert("Dropbox Saver is not loaded.");
+                                            }
+                                        }}
+                                        style={{
+                                            backgroundColor: '#0061FE',
+                                            color: 'white',
+                                            padding: '1rem 2rem',
+                                            borderRadius: '50px',
+                                            border: 'none',
+                                            fontSize: '1.1rem',
+                                            fontWeight: 'bold',
+                                            cursor: 'pointer',
+                                            boxShadow: '0 4px 15px rgba(0, 97, 254, 0.3)',
+                                            transition: 'all 0.2s',
+                                        }}
+                                        onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
+                                        onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                                    >
+                                        Save to Dropbox
+                                    </button>
+                                </div>
                             ) : (
                                 <button
                                     onClick={handleConvert}

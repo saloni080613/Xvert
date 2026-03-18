@@ -15,9 +15,14 @@ class ConversionService {
      * @param {string} targetFormat - The target format (png, jpg, gif).
      * @returns {Promise<Blob>} - The converted file blob.
      */
-    async convertImage(file, targetFormat) {
+    async convertImage(file, targetFormat, cloudUrl = null) {
         const formData = new FormData();
-        formData.append('file', file);
+        if (cloudUrl) {
+            formData.append('cloud_url', cloudUrl);
+            formData.append('filename', file.name);
+        } else {
+            formData.append('file', file);
+        }
         formData.append('target_format', targetFormat);
 
         try {
@@ -41,9 +46,14 @@ class ConversionService {
      * @param {string} targetFormat - The target format (json, csv, xlsx, xml).
      * @returns {Promise<Blob>} - The converted file blob.
      */
-    async convertData(file, targetFormat) {
+    async convertData(file, targetFormat, cloudUrl = null) {
         const formData = new FormData();
-        formData.append('file', file);
+        if (cloudUrl) {
+            formData.append('cloud_url', cloudUrl);
+            formData.append('filename', file.name);
+        } else {
+            formData.append('file', file);
+        }
         formData.append('target_format', targetFormat);
 
         try {
@@ -68,9 +78,14 @@ class ConversionService {
      * @param {string} targetFormat - The target format.
      * @returns {Promise<Blob>} - The converted file blob.
      */
-    async convertDocument(file, sourceFormat, targetFormat) {
+    async convertDocument(file, sourceFormat, targetFormat, cloudUrl = null) {
         const formData = new FormData();
-        formData.append('file', file);
+        if (cloudUrl) {
+            formData.append('cloud_url', cloudUrl);
+            formData.append('filename', file.name);
+        } else {
+            formData.append('file', file);
+        }
         formData.append('source_format', sourceFormat);
         formData.append('target_format', targetFormat);
 
@@ -97,7 +112,13 @@ class ConversionService {
     async mergeDocuments(files) {
         const formData = new FormData();
         files.forEach((file) => {
-            formData.append('files', file);
+            if (file.link) {
+                // If it's a Dropbox file object, append the URL and filename
+                formData.append('cloud_urls', file.link);
+                formData.append('filenames', file.name);
+            } else {
+                formData.append('files', file);
+            }
         });
 
         try {

@@ -8,6 +8,9 @@ import UserAvatar from '../components/UserAvatar'
 import ToolIcon from '../components/ToolIcon'
 import Navbar from '../components/Navbar'
 import AntiGravityBackground from '../components/AntiGravityBackground'
+import DropboxPicker from '../components/DropboxPicker'
+import GoogleDrivePicker from '../components/GoogleDrivePicker'
+import OneDrivePicker from '../components/OneDrivePicker'
 import { useToast } from '../components/ToastContext'
 import { Search, X, FileImage, FileText, Database, Layers, Command, Upload, Sparkles, ArrowRight } from 'lucide-react'
 
@@ -372,6 +375,34 @@ export default function Home() {
 
     const handleRemoveFile = (index) => {
         setFiles(prev => prev.filter((_, i) => i !== index))
+    }
+
+    const handleDropboxSelect = (filesInfo) => {
+        setDownloadUrl(null)
+        if (selectedTool?.id === 'merge-pdf') {
+            const urls = filesInfo.map(f => f.url)
+            const newFiles = urls.map((url, i) => ({
+                name: filesInfo[i].name,
+                url: url,
+                isCloudUrl: true
+            }))
+            setFiles(prev => [...prev, ...newFiles])
+            setFile(null)
+            setMessage('')
+        } else {
+            const fileInfo = filesInfo[0]
+            if (fileInfo) {
+                setFile({
+                    name: fileInfo.name,
+                    url: fileInfo.url,
+                    isCloudUrl: true
+                })
+                setMessage('')
+                setMascotState('fileUploaded')
+                setTimeout(() => setMascotState('idle'), 2000)
+            }
+            setFiles([])
+        }
     }
 
     const handleToolSelect = (tool) => {
@@ -1066,10 +1097,10 @@ export default function Home() {
                                         style={{
                                             border: '2px dashed var(--ag-dropzone-border)',
                                             borderRadius: '16px',
-                                            padding: '1.5rem',
+                                            padding: '2.5rem 2rem',
                                             backgroundColor: 'var(--ag-dropzone-bg)',
                                             position: 'relative',
-                                            maxWidth: '420px',
+                                            maxWidth: '500px',
                                             margin: '0 auto 2rem',
                                             cursor: 'pointer',
                                         }}
@@ -1113,25 +1144,55 @@ export default function Home() {
                                         ) : file ? (
                                             <FilePreview file={file} />
                                         ) : (
-                                            <div>
+                                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1.5rem', paddingTop: '0.5rem' }}>
+                                                {/* Select File Button - Large and Prominent */}
                                                 <motion.div
-                                                    whileHover={{ scale: 1.05 }}
+                                                    whileHover={{ scale: 1.06, boxShadow: '0 8px 30px var(--ag-accent-glow)' }}
+                                                    whileTap={{ scale: 0.98 }}
                                                     transition={springBounce}
                                                     style={{
                                                         background: 'var(--ag-btn-primary)',
                                                         color: 'var(--ag-btn-primary-text)',
-                                                        padding: '0.85rem 2rem',
-                                                        borderRadius: '50px',
-                                                        display: 'inline-block',
+                                                        padding: '1rem 3rem',
+                                                        borderRadius: '60px',
+                                                        display: 'inline-flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
                                                         fontWeight: 700,
-                                                        marginBottom: '0.75rem',
-                                                        boxShadow: '0 4px 20px var(--ag-accent-glow)',
-                                                        fontSize: '0.95rem',
+                                                        boxShadow: '0 6px 25px var(--ag-accent-glow)',
+                                                        fontSize: '1.05rem',
+                                                        cursor: 'pointer',
+                                                        transition: 'all 0.2s ease',
                                                     }}
                                                 >
                                                     Select {selectedTool.type === 'image' ? 'Image' : selectedTool.id === 'merge-pdf' ? 'PDFs' : 'File'}
                                                 </motion.div>
-                                                <p style={{ color: 'var(--ag-text-secondary)', fontSize: '0.85rem' }}>or drag & drop file here</p>
+
+                                                {/* Cloud Storage Icons - Below Button */}
+                                                <div style={{ display: 'flex', gap: '1.2rem', alignItems: 'center', justifyContent: 'center' }} onClick={(e) => e.stopPropagation()}>
+                                                    {/* Divider Above Icons */}
+                                                    <div style={{ width: '60px', height: '2px', background: 'linear-gradient(90deg, transparent, var(--ag-glass-border))', opacity: 0.4 }} />
+                                                    
+                                                    <DropboxPicker
+                                                        onFileSelected={handleDropboxSelect}
+                                                        acceptTypes={getAcceptTypes(selectedTool)}
+                                                        multiselect={selectedTool.id === 'merge-pdf'}
+                                                    />
+                                                    <GoogleDrivePicker
+                                                        onFileSelected={handleDropboxSelect}
+                                                        acceptTypes={getAcceptTypes(selectedTool)}
+                                                        multiselect={selectedTool.id === 'merge-pdf'}
+                                                    />
+                                                    <OneDrivePicker
+                                                        onFileSelected={handleDropboxSelect}
+                                                        acceptTypes={getAcceptTypes(selectedTool)}
+                                                        multiselect={selectedTool.id === 'merge-pdf'}
+                                                    />
+                                                    
+                                                    <div style={{ width: '60px', height: '2px', background: 'linear-gradient(90deg, var(--ag-glass-border), transparent)', opacity: 0.4 }} />
+                                                </div>
+
+                                                <p style={{ color: 'var(--ag-text-secondary)', fontSize: '0.85rem', margin: 0 }}>or drag & drop file here</p>
                                             </div>
                                         )}
                                     </motion.div>
@@ -1139,25 +1200,49 @@ export default function Home() {
 
                                 {/* Action Buttons */}
                                 {downloadUrl ? (
-                                    <motion.button
-                                        onClick={() => {
-                                            const link = document.createElement('a')
-                                            link.href = downloadUrl
-                                            link.setAttribute('download', `converted_${selectedTool.target === 'pdf' ? 'document' : (files.length > 0 ? 'merged' : file.name.split('.')[0])}.${selectedTool.target}`)
-                                            document.body.appendChild(link)
-                                            link.click()
-                                            link.remove()
-                                        }}
-                                        className="ag-btn-primary"
-                                        whileHover={{ scale: 1.06 }}
-                                        whileTap={{ scale: 0.95 }}
-                                        transition={springBounce}
-                                        initial={{ scale: 0.9, opacity: 0 }}
-                                        animate={{ scale: 1, opacity: 1 }}
-                                        style={{ display: 'block', margin: '0 auto', minWidth: '200px' }}
-                                    >
-                                        ↓ Download
-                                    </motion.button>
+                                    <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+                                        <motion.button
+                                            onClick={() => {
+                                                const link = document.createElement('a')
+                                                link.href = downloadUrl
+                                                link.setAttribute('download', `converted_${selectedTool.target === 'pdf' ? 'document' : (files.length > 0 ? 'merged' : file.name?.split('.')[0])}.${selectedTool.target}`)
+                                                document.body.appendChild(link)
+                                                link.click()
+                                                link.remove()
+                                            }}
+                                            className="ag-btn-primary"
+                                            whileHover={{ scale: 1.06 }}
+                                            whileTap={{ scale: 0.95 }}
+                                            transition={springBounce}
+                                            initial={{ scale: 0.9, opacity: 0 }}
+                                            animate={{ scale: 1, opacity: 1 }}
+                                            style={{ display: 'block', minWidth: '180px' }}
+                                        >
+                                            ↓ Download Local
+                                        </motion.button>
+                                        <motion.button
+                                            onClick={() => {
+                                                if (window.Dropbox) {
+                                                    const filename = `converted_${selectedTool.target === 'pdf' ? 'document' : (files.length > 0 ? 'merged' : file.name?.split('.')[0])}.${selectedTool.target}`;
+                                                    window.Dropbox.save(downloadUrl, filename);
+                                                } else {
+                                                    addToast("Dropbox Saver is not loaded.", 'error');
+                                                }
+                                            }}
+                                            className="ag-btn-primary"
+                                            whileHover={{ scale: 1.06 }}
+                                            whileTap={{ scale: 0.95 }}
+                                            transition={springBounce}
+                                            initial={{ scale: 0.9, opacity: 0 }}
+                                            animate={{ scale: 1, opacity: 1 }}
+                                            style={{ 
+                                                background: 'linear-gradient(135deg, #0061FE 0%, #0050d2 100%)',
+                                                display: 'block', minWidth: '180px'
+                                            }}
+                                        >
+                                            ☁ Save to Dropbox
+                                        </motion.button>
+                                    </div>
                                 ) : (
                                     <motion.button
                                         onClick={handleConvert}
