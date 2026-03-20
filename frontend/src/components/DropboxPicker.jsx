@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import { useTheme } from './ThemeContext';
+import { FaDropbox } from 'react-icons/fa';
 
 const DropboxPicker = ({ onFileSelected, acceptTypes, multiselect = false, buttonText = "Import from Dropbox" }) => {
     const { theme } = useTheme();
@@ -76,17 +77,7 @@ const DropboxPicker = ({ onFileSelected, acceptTypes, multiselect = false, butto
             }}
             title="Import from Dropbox"
         >
-            <svg width="20" height="20" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg">
-                {/* Official Dropbox Logo - 4 white diamonds overlapping */}
-                {/* Top left diamond */}
-                <path d="M10 6L16 10L10 14L4 10Z" fill="white"/>
-                {/* Top right diamond */}
-                <path d="M30 6L36 10L30 14L24 10Z" fill="white"/>
-                {/* Middle diamond (overlapping) */}
-                <path d="M20 12L26 16L20 20L14 16Z" fill="white"/>
-                {/* Bottom diamond */}
-                <path d="M20 20L26 24L20 28L14 24Z" fill="white"/>
-            </svg>
+            <FaDropbox size={20} />
         </button>
     );
 };
