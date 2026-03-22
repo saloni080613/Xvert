@@ -11,6 +11,7 @@ import AntiGravityBackground from '../components/AntiGravityBackground'
 import DropboxPicker from '../components/DropboxPicker'
 import GoogleDrivePicker from '../components/GoogleDrivePicker'
 import OneDrivePicker from '../components/OneDrivePicker'
+import GoogleDriveSaver from '../components/GoogleDriveSaver'
 import { useToast } from '../components/ToastContext'
 import { Search, X, FileImage, FileText, Database, Layers, Command, Upload, Sparkles, ArrowRight } from 'lucide-react'
 
@@ -50,9 +51,13 @@ function FilePreview({ file }) {
         if (!file) { setPreview(null); return }
         const ext = file.name.split('.').pop().toLowerCase()
         if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp'].includes(ext)) {
-            const reader = new FileReader()
-            reader.onload = (e) => setPreview(e.target.result)
-            reader.readAsDataURL(file)
+            if (file.isCloudUrl) {
+                setPreview(file.url)
+            } else {
+                const reader = new FileReader()
+                reader.onload = (e) => setPreview(e.target.result)
+                reader.readAsDataURL(file)
+            }
         } else {
             setPreview(null)
         }
@@ -89,7 +94,7 @@ function FilePreview({ file }) {
             )}
             <p style={{ fontWeight: 700, color: 'var(--ag-text)', fontSize: '0.9rem', margin: 0, textAlign: 'center', wordBreak: 'break-all' }}>{file.name}</p>
             <p style={{ fontSize: '0.75rem', color: 'var(--ag-text-secondary)', margin: 0 }}>
-                {(file.size / 1024).toFixed(1)} KB · Click to change file
+                {file.size ? `${(file.size / 1024).toFixed(1)} KB · ` : 'Cloud File · '}Click to change file
             </p>
         </motion.div>
     )
@@ -379,18 +384,20 @@ export default function Home() {
 
     const handleDropboxSelect = (filesInfo) => {
         setDownloadUrl(null)
+        // Cloud pickers might pass a single object instead of an array when multiselect is disabled
+        const fileArray = Array.isArray(filesInfo) ? filesInfo : [filesInfo]
+
         if (selectedTool?.id === 'merge-pdf') {
-            const urls = filesInfo.map(f => f.url)
-            const newFiles = urls.map((url, i) => ({
-                name: filesInfo[i].name,
-                url: url,
+            const newFiles = fileArray.map((f) => ({
+                name: f.name,
+                url: f.url,
                 isCloudUrl: true
             }))
             setFiles(prev => [...prev, ...newFiles])
             setFile(null)
             setMessage('')
         } else {
-            const fileInfo = filesInfo[0]
+            const fileInfo = fileArray[0]
             if (fileInfo) {
                 setFile({
                     name: fileInfo.name,
@@ -500,11 +507,22 @@ export default function Home() {
             console.error(error)
             clearInterval(progressInterval)
             clearTimeout(timer)
+            let errMsg = 'Conversion failed. Please try again.';
             if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
-                addToast('Conversion timed out. File may be too large.', 'error')
+                errMsg = 'Conversion timed out. File may be too large.';
             } else {
-                addToast('Conversion failed. Please try again.', 'error')
+                const detail = await (error.response?.data instanceof Blob ? error.response.data.text() : null);
+                if (detail) {
+                    try { 
+                        errMsg = JSON.parse(detail).detail || detail; 
+                    } catch(e) { 
+                        errMsg = detail; 
+                    }
+                } else if (error.message) {
+                    errMsg = error.message;
+                }
             }
+            addToast(errMsg, 'error')
             setProgress(0)
             setLoading(false)
             setMascotState('error')
@@ -1179,7 +1197,7 @@ export default function Home() {
                                                         multiselect={selectedTool.id === 'merge-pdf'}
                                                     />
                                                     <GoogleDrivePicker
-                                                        onFileSelected={handleDropboxSelect}
+                                                        onFileSelected={handleFileChange}
                                                         acceptTypes={getAcceptTypes(selectedTool)}
                                                         multiselect={selectedTool.id === 'merge-pdf'}
                                                     />
@@ -1220,28 +1238,10 @@ export default function Home() {
                                         >
                                             ↓ Download Local
                                         </motion.button>
-                                        <motion.button
-                                            onClick={() => {
-                                                if (window.Dropbox) {
-                                                    const filename = `converted_${selectedTool.target === 'pdf' ? 'document' : (files.length > 0 ? 'merged' : file.name?.split('.')[0])}.${selectedTool.target}`;
-                                                    window.Dropbox.save(downloadUrl, filename);
-                                                } else {
-                                                    addToast("Dropbox Saver is not loaded.", 'error');
-                                                }
-                                            }}
-                                            className="ag-btn-primary"
-                                            whileHover={{ scale: 1.06 }}
-                                            whileTap={{ scale: 0.95 }}
-                                            transition={springBounce}
-                                            initial={{ scale: 0.9, opacity: 0 }}
-                                            animate={{ scale: 1, opacity: 1 }}
-                                            style={{ 
-                                                background: 'linear-gradient(135deg, #0061FE 0%, #0050d2 100%)',
-                                                display: 'block', minWidth: '180px'
-                                            }}
-                                        >
-                                            ☁ Save to Dropbox
-                                        </motion.button>
+                                        <GoogleDriveSaver 
+                                            downloadUrl={downloadUrl} 
+                                            filename={`converted_${selectedTool.target === 'pdf' ? 'document' : (files.length > 0 ? 'merged' : file.name?.split('.')[0])}.${selectedTool.target}`} 
+                                        />
                                     </div>
                                 ) : (
                                     <motion.button

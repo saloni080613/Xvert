@@ -17,8 +17,9 @@ class ConversionService {
      */
     async convertImage(file, targetFormat, cloudUrl = null) {
         const formData = new FormData();
-        if (cloudUrl) {
-            formData.append('cloud_url', cloudUrl);
+        const actualCloudUrl = cloudUrl || (file && file.isCloudUrl ? file.url : null);
+        if (actualCloudUrl) {
+            formData.append('cloud_url', actualCloudUrl);
             formData.append('filename', file.name);
         } else {
             formData.append('file', file);
@@ -48,8 +49,9 @@ class ConversionService {
      */
     async convertData(file, targetFormat, cloudUrl = null) {
         const formData = new FormData();
-        if (cloudUrl) {
-            formData.append('cloud_url', cloudUrl);
+        const actualCloudUrl = cloudUrl || (file && file.isCloudUrl ? file.url : null);
+        if (actualCloudUrl) {
+            formData.append('cloud_url', actualCloudUrl);
             formData.append('filename', file.name);
         } else {
             formData.append('file', file);
@@ -80,8 +82,9 @@ class ConversionService {
      */
     async convertDocument(file, sourceFormat, targetFormat, cloudUrl = null) {
         const formData = new FormData();
-        if (cloudUrl) {
-            formData.append('cloud_url', cloudUrl);
+        const actualCloudUrl = cloudUrl || (file && file.isCloudUrl ? file.url : null);
+        if (actualCloudUrl) {
+            formData.append('cloud_url', actualCloudUrl);
             formData.append('filename', file.name);
         } else {
             formData.append('file', file);
@@ -112,9 +115,9 @@ class ConversionService {
     async mergeDocuments(files) {
         const formData = new FormData();
         files.forEach((file) => {
-            if (file.link) {
-                // If it's a Dropbox file object, append the URL and filename
-                formData.append('cloud_urls', file.link);
+            if (file.isCloudUrl) {
+                // cloud URLs from drive pickers
+                formData.append('cloud_urls', file.url);
                 formData.append('filenames', file.name);
             } else {
                 formData.append('files', file);

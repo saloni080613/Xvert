@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useTheme } from './ThemeContext';
 
 const GoogleDrivePicker = ({ onFileSelected, acceptTypes, multiselect = false }) => {
@@ -10,8 +10,10 @@ const GoogleDrivePicker = ({ onFileSelected, acceptTypes, multiselect = false })
     const brandColor = '#4285F4';
     const [isLoading, setIsLoading] = useState(false);
     const [scriptsLoaded, setScriptsLoaded] = useState(false);
+    const authTokenRef = useRef(null);
+    const [currentAuthToken, setCurrentAuthToken] = useState(null);
 
-    React.useEffect(() => {
+    useEffect(() => {
         const loadScript = (src) => new Promise((resolve, reject) => {
             if (document.querySelector(`script[src="${src}"]`)) return resolve();
             const script = document.createElement('script');
@@ -56,6 +58,7 @@ const GoogleDrivePicker = ({ onFileSelected, acceptTypes, multiselect = false })
         requestTokenAndShowPicker(clientId, apiKey);
     };
 
+
     const requestTokenAndShowPicker = (clientId, apiKey) => {
         try {
             const tokenClient = window.google.accounts.oauth2.initTokenClient({
@@ -63,6 +66,8 @@ const GoogleDrivePicker = ({ onFileSelected, acceptTypes, multiselect = false })
                 scope: 'https://www.googleapis.com/auth/drive.readonly',
                 callback: (tokenResponse) => {
                     if (tokenResponse && tokenResponse.access_token) {
+                        authTokenRef.current = tokenResponse.access_token;
+                        setCurrentAuthToken(tokenResponse.access_token);
                         createPicker(clientId, apiKey, tokenResponse.access_token);
                     } else {
                         setIsLoading(false);
@@ -90,8 +95,9 @@ const GoogleDrivePicker = ({ onFileSelected, acceptTypes, multiselect = false })
                 view.setMimeTypes(mimeTypes.join(','));
             }
 
-            // Google Picker requires just the numeric project ID, not the full client ID string
-            const appId = clientId.split('-')[0];
+            // Google Picker requires the exact numeric Project Number (App ID), not the full client ID string.
+            // On older projects this was the prefix of the client ID, but on newer ones it MUST be explicitly set
+            const appId = import.meta.env.VITE_GOOGLE_APP_ID || clientId.split('-')[0];
 
             const pickerBuilder = new window.google.picker.PickerBuilder()
                 .enableFeature(window.google.picker.Feature.NAV_HIDDEN)
@@ -129,31 +135,71 @@ const GoogleDrivePicker = ({ onFileSelected, acceptTypes, multiselect = false })
         };
 
         return acceptTypes.split(',')
-            .map(type => type.trim().toLowerCase())
+            .map(type => type.trim().toLowerCase().replace(/^\./, ''))
             .map(type => mimeMap[type] || type)
             .filter(Boolean);
     };
 
     const pickerCallback = (data) => {
-        setIsLoading(false);
-
         if (data.action === window.google.picker.Action.PICKED) {
+            setIsLoading(true);
             const docs = data.docs;
+            
             if (docs && docs.length > 0) {
-                const selectedFiles = docs.map(doc => ({
-                    name: doc.getName(),
-                    url: `https://drive.google.com/uc?id=${doc.getId()}&export=download`,
-                    id: doc.getId()
-                }));
+                const processDocs = async () => {
+                    try {
+                        const tokenToUse = authTokenRef.current;
+                        const downloadedFiles = await Promise.all(docs.map(async (doc) => {
+                            let url;
+                            let finalMimeType = doc.mimeType;
+                            let finalName = doc.name;
 
-                if (multiselect) {
-                    onFileSelected(selectedFiles);
-                } else {
-                    onFileSelected(selectedFiles[0]);
-                }
+                            if (doc.mimeType === 'application/vnd.google-apps.document') {
+                                finalMimeType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+                                url = `https://www.googleapis.com/drive/v3/files/${doc.id}/export?mimeType=${finalMimeType}`;
+                                if (!finalName.endsWith('.docx')) finalName += '.docx';
+                            } else if (doc.mimeType === 'application/vnd.google-apps.spreadsheet') {
+                                finalMimeType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+                                url = `https://www.googleapis.com/drive/v3/files/${doc.id}/export?mimeType=${finalMimeType}`;
+                                if (!finalName.endsWith('.xlsx')) finalName += '.xlsx';
+                            } else if (doc.mimeType === 'application/vnd.google-apps.presentation') {
+                                finalMimeType = 'application/vnd.openxmlformats-officedocument.presentationml.presentation';
+                                url = `https://www.googleapis.com/drive/v3/files/${doc.id}/export?mimeType=${finalMimeType}`;
+                                if (!finalName.endsWith('.pptx')) finalName += '.pptx';
+                            } else {
+                                url = `https://www.googleapis.com/drive/v3/files/${doc.id}?alt=media`;
+                            }
+
+                            const res = await fetch(url, {
+                                headers: { Authorization: `Bearer ${tokenToUse}` }
+                            });
+                            if (!res.ok) {
+                                let errText = '';
+                                try { errText = await res.text(); } catch(e){}
+                                throw new Error(`Google Drive API error: ${res.status} ${errText}`);
+                            }
+                            const blob = await res.blob();
+                            return new File([blob], finalName, { type: finalMimeType || blob.type || 'application/octet-stream' });
+                        }));
+                        
+                        const fakeEvent = { target: { files: downloadedFiles, value: '' } };
+                        onFileSelected(fakeEvent);
+                    } catch (err) {
+                        console.error("Failed to download file from Google Drive", err);
+                        alert("Could not securely download your file from Google Drive. Ensure it is accessible.");
+                    } finally {
+                        setIsLoading(false);
+                    }
+                };
+                processDocs();
+            } else {
+                setIsLoading(false);
             }
         } else if (data.action === window.google.picker.Action.CANCEL) {
+            setIsLoading(false);
             console.log('Google Drive Picker cancelled');
+        } else {
+            // handle loading states safely
         }
     };
 

@@ -7,6 +7,9 @@ Helper functions for file handling, validation, and naming.
 
 import os
 from typing import Optional
+import urllib.request
+import io
+from fastapi import UploadFile
 
 
 # Map of extensions to their normalized format names
@@ -239,3 +242,15 @@ def save_to_history(file_bytes: bytes, filename: str) -> Optional[str]:
     except Exception as e:
         print(f"Failed to save history: {e}")
         return None
+
+def fetch_cloud_file(url: str, filename: str) -> UploadFile:
+    """Download a file from a URL and return a FastAPI UploadFile object."""
+    try:
+        req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+        with urllib.request.urlopen(req, timeout=30) as response:
+            file_bytes = response.read()
+            
+        file_obj = io.BytesIO(file_bytes)
+        return UploadFile(filename=filename, file=file_obj)
+    except Exception as e:
+        raise ValueError(f"Failed to download cloud file: {str(e)}")

@@ -6,10 +6,6 @@ from concurrent.futures import ThreadPoolExecutor
 from functools import partial
 from functools import partial
 from pdf2docx import Converter
-try:
-    from docx2pdf import convert as docx2pdf_convert
-except ImportError:
-    docx2pdf_convert = None
 from pypdf import PdfWriter
 import fitz  # PyMuPDF
 from pypdf import PdfWriter
@@ -36,28 +32,32 @@ async def convert_document(file: UploadFile, source_format: str, target_format: 
 
             # --- LOGIC: Word to PDF ---
             elif source_format in ["docx", "doc"] and target_format == "pdf":
-                if docx2pdf_convert:
-                    # docx2pdf requires absolute paths usually
-                    abs_temp = os.path.abspath(temp_filename)
-                    abs_output = os.path.abspath(output_filename)
-                    print(f"DEBUG: Converting {abs_temp} to {abs_output}")
-                    try:
-                        # Initialize COM for this thread (Critical for FastAPI/Uvicorn)
-                        pythoncom.CoInitialize()
-                        docx2pdf_convert(abs_temp, abs_output)
-                        print("DEBUG: Conversion successful")
-                    except Exception as cx:
-                        print(f"DEBUG: docx2pdf failed: {cx}")
-                        raise cx
-                    finally:
-                        # Uninitialize COM
-                        try:
-                            pythoncom.CoUninitialize()
-                        except:
-                            pass
-                else:
+                try:
+                    from docx2pdf import convert as docx2pdf_convert
+                except ImportError:
                     print("DEBUG: docx2pdf module not loaded")
-                    raise ImportError("docx2pdf module not installed or available. Please restart the backend.")
+                    raise ImportError("docx2pdf module not installed. Please run: pip install docx2pdf pywin32")
+
+                # docx2pdf requires absolute paths usually
+                abs_temp = os.path.abspath(temp_filename)
+                abs_output = os.path.abspath(output_filename)
+                print(f"DEBUG: Converting {abs_temp} to {abs_output}")
+                try:
+                    # Initialize COM for this thread (Critical for FastAPI/Uvicorn)
+                    import pythoncom
+                    pythoncom.CoInitialize()
+                    docx2pdf_convert(abs_temp, abs_output)
+                    print("DEBUG: Conversion successful")
+                except Exception as cx:
+                    print(f"DEBUG: docx2pdf failed: {cx}")
+                    raise cx
+                finally:
+                    # Uninitialize COM
+                    try:
+                        import pythoncom
+                        pythoncom.CoUninitialize()
+                    except:
+                        pass
 
             # --- LOGIC: Image to PDF ---
             elif source_format in ["jpg", "jpeg", "png", "image"] and target_format == "pdf":

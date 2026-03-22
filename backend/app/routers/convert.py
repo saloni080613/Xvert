@@ -37,11 +37,10 @@ from app.utils.file_utils import (
     validate_file_size,
     sanitize_filename,
     get_data_format_from_filename,
-    sanitize_filename,
-    get_data_format_from_filename,
     get_data_output_filename,
     save_to_history,
-    HISTORY_DIR
+    HISTORY_DIR,
+    fetch_cloud_file
 )
 from app.config import settings
 
@@ -93,14 +92,16 @@ async def download_history_file(filename: str):
 
 @router.post("/image")
 async def convert_image_endpoint(
-    file: UploadFile = File(..., description="Image file to convert"),
-    source_format: Optional[str] = Form(
-        default=None,
-        description="Source format (auto-detected if not provided)"
-    ),
     target_format: str = Form(
         ...,
         description="Target format: png, jpg, jpeg, or gif"
+    ),
+    file: Optional[UploadFile] = File(None, description="Image file to convert"),
+    cloud_url: Optional[str] = Form(None),
+    filename: Optional[str] = Form(None),
+    source_format: Optional[str] = Form(
+        default=None,
+        description="Source format (auto-detected if not provided)"
     ),
 ):
     """
@@ -149,6 +150,13 @@ async def convert_image_endpoint(
                 detail="Could not detect source format. Please provide source_format parameter."
             )
     
+    # Ensure file or cloud_url is provided
+    if not file and not cloud_url:
+        raise HTTPException(status_code=400, detail="Must provide either file or cloud_url")
+        
+    if cloud_url:
+        file = fetch_cloud_file(cloud_url, filename or "cloud_image")
+
     # Read file contents
     try:
         file_bytes = await file.read()
@@ -226,14 +234,16 @@ async def get_supported_formats():
 
 @router.post("/data")
 async def convert_data_endpoint(
-    file: UploadFile = File(..., description="Data file to convert"),
-    source_format: Optional[str] = Form(
-        default=None,
-        description="Source format (auto-detected if not provided)"
-    ),
     target_format: str = Form(
         ...,
         description="Target format: json, csv, xlsx, or xml"
+    ),
+    file: Optional[UploadFile] = File(None, description="Data file to convert"),
+    cloud_url: Optional[str] = Form(None),
+    filename: Optional[str] = Form(None),
+    source_format: Optional[str] = Form(
+        default=None,
+        description="Source format (auto-detected if not provided)"
     ),
 ):
     """
@@ -285,6 +295,13 @@ async def convert_data_endpoint(
                 detail="Could not detect source format. Please provide source_format parameter."
             )
     
+    # Ensure file or cloud_url is provided
+    if not file and not cloud_url:
+        raise HTTPException(status_code=400, detail="Must provide either file or cloud_url")
+
+    if cloud_url:
+        file = fetch_cloud_file(cloud_url, filename or "cloud_data")
+
     # Read file contents
     try:
         file_bytes = await file.read()
