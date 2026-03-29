@@ -146,7 +146,6 @@ export default function Signup() {
                                 height: 'auto',
                                 marginBottom: '1.5rem',
                                 filter: 'drop-shadow(0 10px 30px rgba(0,0,0,0.3))',
-                                mixBlendMode: 'screen',
                                 position: 'relative',
                                 zIndex: 1,
                             }}
@@ -162,7 +161,7 @@ export default function Signup() {
                             position: 'relative',
                             zIndex: 1,
                         }}>
-                            Join the Anti-Gravity Experience
+                            You're on Xvert now!
                         </h3>
                         <p style={{
                             color: 'rgba(255,255,255,0.8)',

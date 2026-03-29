@@ -9,6 +9,7 @@ import UpdatePassword from './pages/UpdatePassword'
 import Profile from './pages/Profile'
 import History from './pages/History'
 import About from './pages/About'
+import DeveloperPortal from './pages/DeveloperPortal'
 import Footer from './components/Footer'
 import MegaFooter from './components/MegaFooter'
 import MiniFooter from './components/MiniFooter'
@@ -31,6 +32,7 @@ function AppContent() {
         <Route path="/profile" element={<Profile />} />
         <Route path="/history" element={<History />} />
         <Route path="/about" element={<About />} />
+        <Route path="/developer" element={<DeveloperPortal />} />
       </Routes>
       {isAuthPage ? <MiniFooter /> : <MegaFooter />}
     </div>
@@ -51,6 +53,7 @@ function App() {
               <Route path="/update-password" element={<UpdatePassword />} />
               <Route path="/profile" element={<Profile />} />
               <Route path="/history" element={<History />} />
+              <Route path="/developer" element={<DeveloperPortal />} />
             </Routes>
             <Footer />
           </div>

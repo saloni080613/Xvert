@@ -55,17 +55,13 @@ export default function ForgotPassword() {
                         transition={{ type: 'spring', stiffness: 400, damping: 20, delay: 0.1 }}
                         style={{
                             width: '140px', height: '140px', margin: '0 auto 1rem',
-                            borderRadius: '22px',
-                            background: 'linear-gradient(135deg, #1e1040, #2d1b69)',
                             display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            overflow: 'hidden',
-                            boxShadow: '0 8px 25px rgba(124,58,237,0.2)',
                         }}
                     >
                         <img
                             src="/illustrations/login.png"
                             alt="Space astronaut"
-                            style={{ width: '85%', height: 'auto', mixBlendMode: 'screen' }}
+                            style={{ width: '100%', height: 'auto' }}
                         />
                     </motion.div>
 

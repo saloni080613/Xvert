@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { supabase } from './supabase';
 
 class ConversionService {
     constructor() {
@@ -7,6 +8,22 @@ class ConversionService {
         }
         this.apiBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
         ConversionService.instance = this;
+    }
+
+    /**
+     * Get auth headers if the user is logged in.
+     * @returns {Promise<Object>} Headers object with Authorization if session exists
+     */
+    async _getAuthHeaders() {
+        try {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (session?.access_token) {
+                return { 'Authorization': `Bearer ${session.access_token}` };
+            }
+        } catch (e) {
+            // Silently ignore — auth is optional
+        }
+        return {};
     }
 
     /**
@@ -26,12 +43,15 @@ class ConversionService {
         }
         formData.append('target_format', targetFormat);
 
+        const authHeaders = await this._getAuthHeaders();
+
         try {
             const response = await axios.post(`${this.apiBaseUrl}/api/convert/image`, formData, {
                 responseType: 'blob',
-                timeout: 60000, // 60 seconds
+                timeout: 60000,
                 headers: {
                     'Content-Type': 'multipart/form-data',
+                    ...authHeaders,
                 },
             });
             return response.data;
@@ -42,7 +62,7 @@ class ConversionService {
     }
 
     /**
-     * Convert a data file (JSON, CSV, Excel).
+     * Convert a data file (JSON, CSV, Excel, XML).
      * @param {File} file - The file to convert.
      * @param {string} targetFormat - The target format (json, csv, xlsx, xml).
      * @returns {Promise<Blob>} - The converted file blob.
@@ -58,12 +78,15 @@ class ConversionService {
         }
         formData.append('target_format', targetFormat);
 
+        const authHeaders = await this._getAuthHeaders();
+
         try {
             const response = await axios.post(`${this.apiBaseUrl}/api/convert/data`, formData, {
                 responseType: 'blob',
-                timeout: 60000, // 60 seconds
+                timeout: 60000,
                 headers: {
                     'Content-Type': 'multipart/form-data',
+                    ...authHeaders,
                 },
             });
             return response.data;
@@ -92,12 +115,15 @@ class ConversionService {
         formData.append('source_format', sourceFormat);
         formData.append('target_format', targetFormat);
 
+        const authHeaders = await this._getAuthHeaders();
+
         try {
             const response = await axios.post(`${this.apiBaseUrl}/api/convert/document`, formData, {
                 responseType: 'blob',
-                timeout: 60000, // 60 seconds
+                timeout: 60000,
                 headers: {
                     'Content-Type': 'multipart/form-data',
+                    ...authHeaders,
                 },
             });
             return response.data;
@@ -124,12 +150,15 @@ class ConversionService {
             }
         });
 
+        const authHeaders = await this._getAuthHeaders();
+
         try {
             const response = await axios.post(`${this.apiBaseUrl}/api/convert/merge`, formData, {
                 responseType: 'blob',
-                timeout: 60000, // 60 seconds
+                timeout: 60000,
                 headers: {
                     'Content-Type': 'multipart/form-data',
+                    ...authHeaders,
                 },
             });
             return response.data;
@@ -140,6 +169,7 @@ class ConversionService {
     }
 
     /**
+
      * Convert a file from a remote URL.
      * @param {string} url - The URL of the file to fetch and convert.
      * @param {string} targetFormat - The target format.
@@ -163,6 +193,7 @@ class ConversionService {
             return await response.blob();
         } catch (error) {
             console.error("Remote conversion failed:", error);
+
             throw error;
         }
     }

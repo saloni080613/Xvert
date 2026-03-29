@@ -120,7 +120,24 @@ export default function Navbar({ tools, onToolSelect, onReset, session, UserAvat
                 />
 
                 {session ? (
-                    UserAvatarComponent
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
+                        <Link to="/developer" style={{
+                            textDecoration: 'none',
+                            color: 'var(--ag-text)',
+                            fontSize: '0.85rem',
+                            fontWeight: 700,
+                            fontFamily: '"Outfit", sans-serif',
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.5px',
+                            transition: 'color 0.2s'
+                        }}
+                        onMouseOver={(e) => e.currentTarget.style.color = 'var(--ag-accent)'}
+                        onMouseOut={(e) => e.currentTarget.style.color = 'var(--ag-text)'}
+                        >
+                            Developers
+                        </Link>
+                        {UserAvatarComponent}
+                    </div>
                 ) : (
                     <div style={{ display: 'flex', gap: '0.75rem' }}>
                         <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} transition={springBounce}>

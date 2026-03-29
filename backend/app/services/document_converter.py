@@ -1,29 +1,39 @@
 import os
-import asyncio
 import tempfile
+import asyncio
 import traceback
 import sys
 from pdf2docx import Converter
-from pypdf import PdfWriter
-import fitz  # PyMuPDF
-from PIL import Image
+from functools import partial
+
+try:
+    from docx2pdf import convert as docx2pdf_convert
+except ImportError:
+    docx2pdf_convert = None
+
 try:
     import pythoncom
 except ImportError:
     pythoncom = None
+
+
+# All temp/output files go into the system temp directory
+_TEMP_DIR = tempfile.gettempdir()
+
 
 async def convert_document(file_content: bytes, filename: str, source_format: str, target_format: str) -> str:
     """
     Converts document bytes to target format and returns the ABSOLUTE path to the result.
     """
     # Use a secure temporary directory for all operations
-    temp_dir = tempfile.gettempdir()
+    temp_dir = _TEMP_DIR
     
     # Input file
     suffix = f".{source_format}"
-    with tempfile.NamedTemporaryFile(delete=False, suffix=suffix, dir=temp_dir) as tmp_in:
-        tmp_in.write(file_content)
-        input_path = tmp_in.name
+    # Use a safer way to create the temp input file to avoid issues with some converters needing real extensions
+    input_path = os.path.join(temp_dir, f"xvert_in_{os.path.basename(filename)}")
+    with open(input_path, "wb") as f:
+        f.write(file_content)
 
     # Output file
     output_path = os.path.join(temp_dir, f"converted_{os.path.basename(input_path)}.{target_format}")
@@ -38,18 +48,24 @@ async def convert_document(file_content: bytes, filename: str, source_format: st
 
             # --- Word to PDF ---
             elif source_format in ["docx", "doc"] and target_format == "pdf":
-                try:
-                    from docx2pdf import convert as docx2pdf_convert
-                except ImportError:
-                    raise ImportError("docx2pdf module not installed. Please run: pip install docx2pdf pywin32")
-
-                if pythoncom:
-                    pythoncom.CoInitialize()
-                try:
-                    docx2pdf_convert(input_path, output_path)
-                finally:
-                    if pythoncom:
-                        pythoncom.CoUninitialize()
+                if docx2pdf_convert:
+                    abs_input = os.path.abspath(input_path)
+                    abs_output = os.path.abspath(output_path)
+                    try:
+                        if pythoncom:
+                            pythoncom.CoInitialize()
+                        docx2pdf_convert(abs_input, abs_output)
+                    except Exception as cx:
+                        print(f"DEBUG: docx2pdf failed: {cx}")
+                        raise cx
+                    finally:
+                        if pythoncom:
+                            try:
+                                pythoncom.CoUninitialize()
+                            except:
+                                pass
+                else:
+                    raise ImportError("docx2pdf module not installed or available. Please run: pip install docx2pdf pywin32")
 
             # --- Image to PDF ---
             elif source_format.lower() in ["jpg", "jpeg", "png", "image"] and target_format == "pdf":
@@ -58,7 +74,7 @@ async def convert_document(file_content: bytes, filename: str, source_format: st
                         img = img.convert('RGB')
                     img.save(output_path, "PDF", resolution=100.0)
 
-            # --- PDF to Image ---
+            # --- PDF to Image (First Page Only) ---
             elif source_format == "pdf" and target_format.lower() in ["jpg", "png", "jpeg"]:
                 doc = fitz.open(input_path)
                 page = doc.load_page(0)
@@ -94,30 +110,41 @@ async def convert_document(file_content: bytes, filename: str, source_format: st
 
     return output_path
 
+
 async def merge_pdfs(files) -> str:
     """
     Merges multiple PDFs (can be UploadFile objects or a list of dicts with 'content'/'name').
     """
-    temp_dir = tempfile.gettempdir()
+    temp_dir = _TEMP_DIR
     temp_files = [] 
 
     try:
-        for i, f in enumerate(files):
-            # Handle both UploadFile (async) and simple objects (sync bytes)
-            content = await f.read() if hasattr(f, 'read') else (f.get('content') if isinstance(f, dict) else None)
+        from pypdf import PdfWriter
+        for f in files:
+            # Handle both UploadFile (async) and simple objects (sync bytes or from cloud)
+            if hasattr(f, 'read'):
+                content = await f.read()
+            elif isinstance(f, dict) and 'content' in f:
+                content = f['content']
+            else:
+                # If it's already a file object from fetch_cloud_file which returns UploadFile
+                content = await f.read()
+            
             if content is None: continue
             
-            t = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf", dir=temp_dir)
-            t.write(content)
-            t.close()
-            temp_files.append(t.name)
+            # Create a unique temp file for each part
+            prefix = f"xvert_merge_part_{os.urandom(4).hex()}_"
+            t_path = os.path.join(temp_dir, prefix + (getattr(f, 'filename', 'part.pdf') if hasattr(f, 'filename') else 'part.pdf'))
+            with open(t_path, "wb") as t:
+                t.write(content)
+            temp_files.append(t_path)
 
         def merge_sync():
             merger = PdfWriter()
             for tf in temp_files:
                 merger.append(tf)
             out_path = os.path.join(temp_dir, f"merged_{os.urandom(4).hex()}.pdf")
-            merger.write(out_path)
+            merger.with_open(out_path, "wb") if hasattr(merger, 'with_open') else merger.write(out_path)
             merger.close()
             return out_path
 
@@ -127,4 +154,8 @@ async def merge_pdfs(files) -> str:
     finally:
         for tf in temp_files:
             if os.path.exists(tf):
-                os.remove(tf)
+                try:
+                    os.remove(tf)
+                except: pass
+
+    return output_path

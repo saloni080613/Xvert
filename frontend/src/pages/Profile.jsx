@@ -2,9 +2,10 @@ import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { Link } from 'react-router-dom'
 import authService from '../services/AuthService'
+import { supabase } from '../services/supabase'
 import AntiGravityBackground from '../components/AntiGravityBackground'
 import SkeletonLoader from '../components/SkeletonLoader'
-import { ArrowLeft, User, Mail, Clock } from 'lucide-react'
+import { ArrowLeft, User, Mail, Clock, BarChart3, HardDrive } from 'lucide-react'
 
 const springBounce = { type: 'spring', stiffness: 400, damping: 20 }
 
@@ -12,13 +13,44 @@ export default function Profile() {
     const [session, setSession] = useState(null)
     const [loading, setLoading] = useState(true)
     const [imgError, setImgError] = useState(false)
+    const [profileStats, setProfileStats] = useState(null)
 
     useEffect(() => {
         authService.getSession().then(({ data: { session } }) => {
             setSession(session)
-            setLoading(false)
+            if (session) {
+                fetchProfileStats(session.user.id)
+            } else {
+                setLoading(false)
+            }
         })
     }, [])
+
+    const fetchProfileStats = async (userId) => {
+        try {
+            const { data, error } = await supabase
+                .from('profiles')
+                .select('total_conversions, storage_used')
+                .eq('id', userId)
+                .single()
+
+            if (!error && data) {
+                setProfileStats(data)
+            }
+        } catch (e) {
+            console.error('Failed to load profile stats:', e)
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    const formatStorageUsed = (bytes) => {
+        if (!bytes || bytes === 0) return '0 B'
+        if (bytes < 1024) return `${bytes} B`
+        if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+        if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+        return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`
+    }
 
     if (loading) {
         return (
@@ -97,6 +129,22 @@ export default function Profile() {
         { icon: User, label: 'Full Name', value: fullName },
         { icon: Mail, label: 'Email Address', value: user.email },
         { icon: Clock, label: 'Last Sign In', value: new Date(user.last_sign_in_at).toLocaleString() },
+    ]
+
+    // Stats cards data
+    const statsCards = [
+        {
+            icon: BarChart3,
+            label: 'Total Conversions',
+            value: profileStats?.total_conversions ?? 0,
+            gradient: 'linear-gradient(135deg, #7c3aed, #a78bfa)',
+        },
+        {
+            icon: HardDrive,
+            label: 'Storage Used',
+            value: formatStorageUsed(profileStats?.storage_used ?? 0),
+            gradient: 'linear-gradient(135deg, #2563eb, #60a5fa)',
+        },
     ]
 
     return (
@@ -180,6 +228,48 @@ export default function Profile() {
                                 <span>{fullName.charAt(0).toUpperCase()}</span>
                             )}
                         </motion.div>
+
+                        {/* Stats Cards */}
+                        <div style={{
+                            width: '100%',
+                            display: 'grid',
+                            gridTemplateColumns: '1fr 1fr',
+                            gap: '1rem',
+                        }}>
+                            {statsCards.map((stat, index) => (
+                                <motion.div
+                                    key={stat.label}
+                                    initial={{ opacity: 0, y: 20 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ delay: 0.15 + index * 0.1 }}
+                                    style={{
+                                        background: stat.gradient,
+                                        borderRadius: '16px',
+                                        padding: '1.2rem',
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        alignItems: 'center',
+                                        gap: '0.5rem',
+                                        boxShadow: '0 4px 15px rgba(0,0,0,0.15)',
+                                    }}
+                                >
+                                    <stat.icon size={22} color="rgba(255,255,255,0.9)" />
+                                    <div style={{
+                                        fontSize: '1.5rem',
+                                        fontWeight: 800,
+                                        color: '#fff',
+                                        fontFamily: '"Outfit", sans-serif',
+                                    }}>{stat.value}</div>
+                                    <div style={{
+                                        fontSize: '0.75rem',
+                                        color: 'rgba(255,255,255,0.8)',
+                                        fontWeight: 600,
+                                        textTransform: 'uppercase',
+                                        letterSpacing: '0.05em',
+                                    }}>{stat.label}</div>
+                                </motion.div>
+                            ))}
+                        </div>
 
                         {/* Info Fields */}
                         <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '1rem' }}>

@@ -1,17 +1,76 @@
-import axios from 'axios'
+/**
+ * HistoryService
+ * ==============
+ * Queries the Supabase `conversions` table directly (RLS ensures per-user filtering)
+ * and generates signed download URLs from Supabase Storage.
+ */
 
-const API_URL = 'http://localhost:8000/api/convert'
+import { supabase } from './supabase'
 
 const historyService = {
+    /**
+     * Fetch the authenticated user's conversion history, newest first.
+     * @returns {Promise<Array>} List of conversion records
+     */
     getHistory: async () => {
-        try {
-            const response = await axios.get(`${API_URL}/history`)
-            return response.data // Expected { files: [...] }
-        } catch (error) {
-            console.error('Error fetching history:', error)
-            throw error
+        const { data, error } = await supabase
+            .from('conversions')
+            .select('*')
+            .order('created_at', { ascending: false })
+            .limit(50)
+
+        if (error) throw error
+        return data || []
+    },
+
+    /**
+     * Delete a conversion record.
+     * The backend history router also handles storage file cleanup.
+     * @param {string} id - Conversion UUID
+     */
+    deleteConversion: async (id) => {
+        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+        const { data: { session } } = await supabase.auth.getSession()
+
+        if (!session?.access_token) throw new Error('Not authenticated')
+
+        const response = await fetch(`${apiUrl}/api/history/${id}`, {
+            method: 'DELETE',
+            headers: {
+                'Authorization': `Bearer ${session.access_token}`,
+            },
+        })
+
+        if (!response.ok) {
+            const err = await response.json()
+            throw new Error(err.detail || 'Failed to delete')
         }
-    }
+    },
+
+    /**
+     * Get a signed download URL for a converted file.
+     * @param {string} conversionId - Conversion UUID
+     * @returns {Promise<{download_url: string, filename: string}>}
+     */
+    getDownloadUrl: async (conversionId) => {
+        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+        const { data: { session } } = await supabase.auth.getSession()
+
+        if (!session?.access_token) throw new Error('Not authenticated')
+
+        const response = await fetch(`${apiUrl}/api/history/${conversionId}/download`, {
+            headers: {
+                'Authorization': `Bearer ${session.access_token}`,
+            },
+        })
+
+        if (!response.ok) {
+            const err = await response.json()
+            throw new Error(err.detail || 'Failed to get download URL')
+        }
+
+        return await response.json()
+    },
 }
 
 export default historyService

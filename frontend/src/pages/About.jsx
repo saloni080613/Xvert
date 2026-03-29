@@ -34,7 +34,7 @@ const About = () => {
                         lineHeight: '1.6',
                         color: '#4b5563',
                         maxWidth: '800px', // Increased max-width slightly to accommodate larger text
-                        maxWidth: '700px',
+
                         margin: '0 auto'
                     }}>
                         Since Xvert is a project built on the principle of "vibe coding"—focusing on high-level logic and seamless execution rather than getting bogged down in syntax—our approach reflects that same efficiency.

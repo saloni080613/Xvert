@@ -2,10 +2,10 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../services/supabase'
 import authService from '../services/AuthService'
-import conversionService from '../services/ConversionService'
 import UserAvatar from '../components/UserAvatar'
 import ToolIcon from '../components/ToolIcon'
 import Navbar from '../components/Navbar'
+
 import DropboxPicker from '../components/DropboxPicker'
 import GoogleDrivePicker from '../components/GoogleDrivePicker'
 import RemoteFetch from '../components/RemoteFetch'
@@ -44,6 +44,7 @@ const tools = [
 
 export default function Dashboard() {
 
+
     const getAcceptTypes = (tool) => {
         if (!tool) return '*'
         if (tool.id === 'merge-pdf') return '.pdf'
@@ -61,6 +62,7 @@ export default function Dashboard() {
         await authService.logout()
         navigate('/')
     }
+
 
     const handleFileChange = (e) => {
         setDownloadUrl(null)
@@ -128,10 +130,12 @@ export default function Dashboard() {
         setFile(null)
         setMessage('')
         setShowRemoteFetch(false)
+
     }
 
     const handleBackToGrid = () => {
         setSelectedTool(null)
+
         setFile(null)
         setFiles([])
         setMessage('')
@@ -224,6 +228,7 @@ export default function Dashboard() {
             setProgress(0);
             setLoading(false);
         }
+
     }
 
     return (
@@ -311,8 +316,9 @@ export default function Dashboard() {
                 </>
             )}
 
-            {/* View: Selected Tool Interface */}
+            {/* View: Selected Tool — Batch Uploader */}
             {selectedTool && (
+
                 <main style={{ padding: '3rem 2rem', maxWidth: '1200px', margin: '0 auto' }}>
                     <div style={{ maxWidth: '800px', margin: '0 auto', textAlign: 'center' }}>
                         {/* Back Button */}
@@ -601,6 +607,7 @@ export default function Dashboard() {
                             )}
                         </div>
                     </div>
+
                 </main>
             )}
         </div>

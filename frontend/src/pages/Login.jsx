@@ -101,7 +101,6 @@ export default function Login() {
                                 height: 'auto',
                                 marginBottom: '1.5rem',
                                 filter: 'drop-shadow(0 10px 30px rgba(0,0,0,0.3))',
-                                mixBlendMode: 'screen',
                                 position: 'relative',
                                 zIndex: 1,
                             }}
