@@ -20,23 +20,22 @@ function AppContent() {
   const location = useLocation();
   const authPaths = ['/login', '/signup', '/forgot-password', '/update-password'];
   const isAuthPage = authPaths.includes(location.pathname);
+  const isHomePage = location.pathname === '/';
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
-      <main style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-        <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/signup" element={<Signup />} />
-            <Route path="/forgot-password" element={<ForgotPassword />} />
-            <Route path="/update-password" element={<UpdatePassword />} />
-            <Route path="/profile" element={<Profile />} />
-            <Route path="/history" element={<History />} />
-            <Route path="/about" element={<About />} />
-            <Route path="/developer" element={<DeveloperPortal />} />
-        </Routes>
-      </main>
-      {isAuthPage ? <MiniFooter /> : <MegaFooter />}
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/signup" element={<Signup />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/update-password" element={<UpdatePassword />} />
+        <Route path="/profile" element={<Profile />} />
+        <Route path="/history" element={<History />} />
+        <Route path="/about" element={<About />} />
+        <Route path="/developer" element={<DeveloperPortal />} />
+      </Routes>
+      {isAuthPage || isHomePage ? <MiniFooter /> : <MegaFooter />}
     </div>
   );
 }

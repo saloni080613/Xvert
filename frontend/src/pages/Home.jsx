@@ -246,19 +246,25 @@ export default function Home() {
     const [mascotState, setMascotState] = useState('idle')
     const { fileStates, batchStatus, startBatch, reset: resetBatch } = useBatchUpload()
     const [pendingFiles, setPendingFiles] = useState([])
+    const [remoteUrl, setRemoteUrl] = useState('')
+    const [downloadUrl, setDownloadUrl] = useState(null)
+    const file = pendingFiles[0] || null
+    const files = pendingFiles
+    const setFile = (f) => setPendingFiles(f ? [f] : [])
+    const setFiles = (f) => setPendingFiles(f)
     const [resultBlob, setResultBlob] = useState(null)
     const resultUrl = useMemo(() => resultBlob ? URL.createObjectURL(resultBlob) : null, [resultBlob])
     const [extractedText, setExtractedText] = useState(null)
     const [ocrDone, setOcrDone] = useState(false)
     const [isOcrConverting, setIsOcrConverting] = useState(false)
-    const isConverting = ['uploading','processing'].includes(batchStatus) || isOcrConverting
-    const isDone       = batchStatus === 'done'
+    const isConverting = ['uploading', 'processing'].includes(batchStatus) || isOcrConverting
+    const isDone = batchStatus === 'done'
     const fileStatesValues = Object.values(fileStates)
     const overallProgress = fileStatesValues.length > 0
-        ? Math.round(fileStatesValues.reduce((s,f) => s + (f.progress ?? 0), 0) / fileStatesValues.length)
+        ? Math.round(fileStatesValues.reduce((s, f) => s + (f.progress ?? 0), 0) / fileStatesValues.length)
         : 0
-    const canConvert = pendingFiles.length > 0 &&
-        (selectedTool?.id !== 'merge-pdf' || pendingFiles.length >= 2)
+    const canConvert = (pendingFiles.length > 0 || (remoteUrl && remoteUrl.trim() !== '')) &&
+        (selectedTool?.id !== 'merge-pdf' || (pendingFiles.length >= 2 || (remoteUrl && remoteUrl.trim() !== '' && pendingFiles.length >= 1)))
     // UX enhancement states
     const [searchQuery, setSearchQuery] = useState('')
     const [activeCategory, setActiveCategory] = useState('all')
@@ -273,18 +279,18 @@ export default function Home() {
     const getSmartMatches = useCallback((fileName) => {
         const ext = fileName.split('.').pop().toLowerCase()
         const extMap = {
-            'pdf':  ['pdf-to-word', 'pdf-to-jpg', 'pdf-to-png'],
+            'pdf': ['pdf-to-word', 'pdf-to-jpg', 'pdf-to-png'],
             'docx': ['docx-to-pdf'],
-            'doc':  ['docx-to-pdf'],
-            'jpg':  ['jpg-to-png', 'jpg-to-gif', 'image-to-pdf'],
+            'doc': ['docx-to-pdf'],
+            'jpg': ['jpg-to-png', 'jpg-to-gif', 'image-to-pdf'],
             'jpeg': ['jpg-to-png', 'jpg-to-gif', 'image-to-pdf'],
-            'png':  ['png-to-jpg', 'png-to-gif', 'image-to-pdf'],
-            'gif':  ['gif-to-jpg', 'gif-to-png'],
-            'csv':  ['csv-to-json', 'csv-to-xml', 'csv-to-excel'],
+            'png': ['png-to-jpg', 'png-to-gif', 'image-to-pdf'],
+            'gif': ['gif-to-jpg', 'gif-to-png'],
+            'csv': ['csv-to-json', 'csv-to-xml', 'csv-to-excel'],
             'json': ['json-to-csv', 'json-to-xml', 'json-to-excel'],
             'xlsx': ['excel-to-csv', 'excel-to-json', 'excel-to-xml'],
-            'xls':  ['excel-to-csv', 'excel-to-json', 'excel-to-xml'],
-            'xml':  ['xml-to-json', 'xml-to-csv', 'xml-to-excel'],
+            'xls': ['excel-to-csv', 'excel-to-json', 'excel-to-xml'],
+            'xml': ['xml-to-json', 'xml-to-csv', 'xml-to-excel'],
         }
         const matchIds = extMap[ext] || []
         return tools.filter(t => matchIds.includes(t.id))
@@ -442,6 +448,7 @@ export default function Home() {
     const handleToolSelect = (tool) => {
         setSelectedTool(tool)
         setPendingFiles([])
+        setRemoteUrl('')
         resetBatch()
         setMessage('')
         setResultBlob(null)
@@ -454,6 +461,7 @@ export default function Home() {
     const handleBackToGrid = () => {
         setSelectedTool(null)
         setPendingFiles([])
+        setRemoteUrl('')
         resetBatch()
         setMessage('')
         setResultBlob(null)
@@ -473,6 +481,7 @@ export default function Home() {
     }, [])
 
     const handleConvert = async () => {
+        console.log("handleConvert CLICKED! canConvert:", canConvert, "remoteUrl:", remoteUrl, "selectedTool:", selectedTool)
         if (!canConvert) {
             addToast(
                 selectedTool?.id === 'merge-pdf'
@@ -486,8 +495,14 @@ export default function Home() {
         try {
 
             let resultBlob
+            const trimmedUrl = remoteUrl?.trim();
+            console.log("trimmedUrl:", trimmedUrl)
 
-            if (file && file.isRemote) {
+            if (trimmedUrl) {
+                console.log("Calling remoteConvert for:", trimmedUrl, "target:", selectedTool?.target)
+                resultBlob = await conversionService.remoteConvert(trimmedUrl, selectedTool?.target)
+                console.log("remoteConvert returned:", resultBlob)
+            } else if (file && file.isRemote) {
                 resultBlob = await conversionService.remoteConvert(file.url, selectedTool.target)
             } else if (selectedTool.id === 'merge-pdf') {
                 resultBlob = await conversionService.mergeDocuments(files)
@@ -512,6 +527,17 @@ export default function Home() {
                     setProgress(0)
                     setMascotState('idle')
                 }, 3000)
+                return // batch handles its own downloading/UI
+            }
+
+            if (resultBlob) {
+                setResultBlob(resultBlob)
+                setMascotState('success')
+                addToast('Conversion successful! 🎉', 'success')
+                saveRecent(selectedTool.name, selectedTool.target)
+                setTimeout(() => setMascotState('idle'), 3000)
+            } else {
+                throw new Error('Conversion returned an empty result.')
             }
 
         } catch (error) {
@@ -524,10 +550,10 @@ export default function Home() {
             } else {
                 const detail = await (error.response?.data instanceof Blob ? error.response.data.text() : null);
                 if (detail) {
-                    try { 
-                        errMsg = JSON.parse(detail).detail || detail; 
-                    } catch(e) { 
-                        errMsg = detail; 
+                    try {
+                        errMsg = JSON.parse(detail).detail || detail;
+                    } catch (e) {
+                        errMsg = detail;
                     }
                 } else if (error.message) {
                     errMsg = error.message;
@@ -1020,7 +1046,7 @@ export default function Home() {
                                         fontFamily: '"Outfit", sans-serif',
                                     }}
                                 >
-                                    ← Home
+                                    Home
                                     <span style={{
                                         fontSize: '0.7rem',
                                         color: 'var(--ag-text-secondary)',
@@ -1085,7 +1111,7 @@ export default function Home() {
                                 {(isConverting || isDone) && (
                                     <>
                                         <OrbitalProgress progress={overallProgress} />
-                                        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(190px,1fr))', gap:'0.75rem', marginBottom:'1.5rem', textAlign: 'left' }}>
+                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(190px,1fr))', gap: '0.75rem', marginBottom: '1.5rem', textAlign: 'left' }}>
                                             {Object.entries(fileStates).map(([id, state]) => (
                                                 <ProgressCard key={id} filename={state.filename} progress={state.progress} status={state.status} downloadUrl={state.downloadUrl} />
                                             ))}
@@ -1166,7 +1192,7 @@ export default function Home() {
                                                 <div style={{ textAlign: 'center', marginTop: '1rem', fontSize: '0.75rem', color: 'var(--ag-text-secondary)' }}>
                                                     Click box or use cloud pickers below to add more files
                                                 </div>
-                                                
+
                                                 {/* Cloud Storage Icons - For adding more PDFs */}
                                                 {!resultUrl && (
                                                     <div style={{ display: 'flex', gap: '1.2rem', alignItems: 'center', justifyContent: 'center', position: 'relative', zIndex: 10, marginTop: '1rem', pointerEvents: 'auto' }} onClick={(e) => e.stopPropagation()}>
@@ -1217,7 +1243,7 @@ export default function Home() {
                                                     <div style={{ display: 'flex', gap: '1.2rem', alignItems: 'center', justifyContent: 'center', position: 'relative', zIndex: 10 }} onClick={(e) => e.stopPropagation()}>
                                                         {/* Divider Above Icons */}
                                                         <div style={{ width: '60px', height: '2px', background: 'linear-gradient(90deg, transparent, var(--ag-glass-border))', opacity: 0.4 }} />
-                                                        
+
                                                         <DropboxPicker
                                                             onFileSelected={handleDropboxSelect}
                                                             acceptTypes={getAcceptTypes(selectedTool)}
@@ -1238,26 +1264,28 @@ export default function Home() {
                                     </motion.div>
                                 )}
 
-                                    {/* Remote Fetch Component (moved outside dropzone to be interactive) */}
-                                    {!resultUrl && (
-                                        <RemoteFetch
-                                            targetFormat={selectedTool?.target || tools.find(t => t.id === selectedTool?.id)?.target}
-                                            allowedSourceFormats={(() => {
-                                                const tool = selectedTool;
-                                                if (!tool) return null;
-                                                if (tool.id === 'merge-pdf' || tool.type === 'pdf') return ['pdf'];
-                                                if (tool.type === 'docx') return ['docx'];
-                                                if (tool.type === 'image') return ['png', 'jpg', 'jpeg', 'gif'];
-                                                if (tool.type === 'jpg') return ['jpg', 'jpeg'];
-                                                if (tool.type === 'png') return ['png'];
-                                                if (tool.type === 'gif') return ['gif'];
-                                                if (tool.type === 'data') return ['json', 'csv', 'xlsx', 'xml'];
-                                                return null;
-                                            })()}
-                                            onUrlSelected={handleRemoteUrlSelected}
-                                            isConverting={isConverting}
-                                        />
-                                    )}
+                                {/* Remote Fetch Component (moved outside dropzone to be interactive) */}
+                                {!resultUrl && (
+                                    <RemoteFetch
+                                        targetFormat={selectedTool?.target || tools.find(t => t.id === selectedTool?.id)?.target}
+                                        allowedSourceFormats={(() => {
+                                            const tool = selectedTool;
+                                            if (!tool) return null;
+                                            if (tool.id === 'merge-pdf' || tool.type === 'pdf') return ['pdf'];
+                                            if (tool.type === 'docx') return ['docx'];
+                                            if (tool.type === 'image') return ['png', 'jpg', 'jpeg', 'gif'];
+                                            if (tool.type === 'jpg') return ['jpg', 'jpeg'];
+                                            if (tool.type === 'png') return ['png'];
+                                            if (tool.type === 'gif') return ['gif'];
+                                            if (tool.type === 'data') return ['json', 'csv', 'xlsx', 'xml'];
+                                            return null;
+                                        })()}
+                                        url={remoteUrl}
+                                        onUrlChange={setRemoteUrl}
+                                        onSubmit={handleConvert}
+                                        isConverting={isConverting}
+                                    />
+                                )}
 
                                 {/* Action Buttons */}
 
@@ -1280,7 +1308,7 @@ export default function Home() {
                                             animate={{ scale: 1, opacity: 1 }}
                                             style={{ display: 'block', minWidth: '180px' }}
                                         >
-                                            Download 
+                                            Download
                                         </motion.button>
                                     </div>
                                 ) : (
@@ -1370,7 +1398,7 @@ export default function Home() {
                                                         marginRight: 'auto',
                                                     }}
                                                 >
-                                                    ↻ Retry
+                                                    Retry
                                                 </motion.button>
                                             )}
                                         </motion.div>

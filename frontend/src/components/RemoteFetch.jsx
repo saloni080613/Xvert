@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { motion } from 'framer-motion';
 import { useToast } from './ToastContext';
 
@@ -8,15 +8,16 @@ import { useToast } from './ToastContext';
  * Props:
  *   targetFormat         (string)   — the conversion target, e.g. "png", "docx"  (required)
  *   allowedSourceFormats (string[]) — formats the current tool accepts, e.g. ['jpg','png']
- *   onFileFetched        (fn)       — called with a File object if caller wants to load it
- *   isConverting         (bool)     — disables the button while the parent is busy
+ *   url                  (string)   — the current url value
+ *   onUrlChange          (fn)       — called when the url input changes
+ *   isConverting         (bool)     — disables the input while the parent is busy
+ *   onSubmit             (fn)       — called when the user hits Enter so it can trigger the Convert button
  */
-const RemoteFetch = ({ onUrlSelected, isConverting, allowedSourceFormats = null, targetFormat = null }) => {
-    const [url, setUrl] = useState('');
+const RemoteFetch = ({ url, onUrlChange, onSubmit, isConverting, allowedSourceFormats = null, targetFormat = null }) => {
     const { addToast } = useToast();
 
     const handleUrlSubmit = () => {
-        if (!url.trim()) {
+        if (!url || !url.trim()) {
             addToast('Please enter a URL', 'error');
             return;
         }
@@ -24,16 +25,8 @@ const RemoteFetch = ({ onUrlSelected, isConverting, allowedSourceFormats = null,
             addToast('URL must start with http:// or https://', 'error');
             return;
         }
-        
-        // Notify parent that a remote URL has been "selected"
-        if (onUrlSelected) {
-            onUrlSelected({
-                name: url.split('/').pop() || 'Remote File',
-                url: url.trim(),
-                isRemote: true
-            });
-            setUrl(''); // Clear after selecting
-            addToast('Remote URL selected!', 'success');
+        if (onSubmit) {
+            onSubmit();
         }
     };
 
@@ -78,8 +71,8 @@ const RemoteFetch = ({ onUrlSelected, isConverting, allowedSourceFormats = null,
             <div style={{ display: 'flex', gap: '0.8rem' }}>
                 <input
                     type="url"
-                    value={url}
-                    onChange={(e) => setUrl(e.target.value)}
+                    value={url || ''}
+                    onChange={(e) => onUrlChange && onUrlChange(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && !isConverting && handleUrlSubmit()}
                     placeholder="Paste file URL (Direct link, Drive, Dropbox…)"
                     disabled={isConverting}
@@ -97,25 +90,6 @@ const RemoteFetch = ({ onUrlSelected, isConverting, allowedSourceFormats = null,
                     onFocus={(e) => e.target.style.borderColor = 'var(--ag-accent)'}
                     onBlur={(e) => e.target.style.borderColor = 'var(--ag-glass-border)'}
                 />
-                <motion.button
-                    onClick={handleUrlSubmit}
-                    disabled={isConverting || !url.trim()}
-                    whileHover={!isConverting ? { scale: 1.03 } : {}}
-                    whileTap={!isConverting ? { scale: 0.97 } : {}}
-                    style={{
-                        padding: '0.8rem 1.5rem',
-                        borderRadius: '10px',
-                        border: 'none',
-                        background: isConverting || !url.trim() ? '#ccc' : 'var(--ag-accent, #457B9D)',
-                        color: '#fff',
-                        fontWeight: '700',
-                        fontSize: '0.92rem',
-                        cursor: isConverting || !url.trim() ? 'not-allowed' : 'pointer',
-                        whiteSpace: 'nowrap',
-                    }}
-                >
-                    Select
-                </motion.button>
             </div>
 
             <div style={{ fontSize: '0.8rem', color: 'var(--ag-text-secondary, #666)', marginTop: '0.8rem', opacity: 0.8 }}>

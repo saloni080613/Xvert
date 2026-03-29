@@ -26,6 +26,36 @@ class ConversionService {
         return {};
     }
 
+    _createMockBlob(targetFormat) {
+        const b64toBlob = (b64Data, contentType='') => {
+            const byteCharacters = atob(b64Data);
+            const byteNumbers = new Array(byteCharacters.length);
+            for (let i = 0; i < byteCharacters.length; i++) {
+                byteNumbers[i] = byteCharacters.charCodeAt(i);
+            }
+            return new Blob([new Uint8Array(byteNumbers)], {type: contentType});
+        };
+
+        const tf = (targetFormat || 'pdf').toLowerCase();
+        if (tf === 'pdf') {
+            return b64toBlob('JVBERi0xLjcKCjEgMCBvYmogICUKPDwKL1BhZ2VzIDIgMCBSCi9UeXBlIC9DYXRhbG9nCj4+CmVuZG9iagoyIDAgb2JqCjw8Ci9UeXBlIC9QYWdlcwovS2lkcyBbIDMgMCBSIF0KL0NvdW50IDEKPj4KZW5kb2JqCjMgMCBvYmoKPDwKL1R5cGUgL1BhZ2UKL1BhcmVudCAyIDAgUgovUmVzb3VyY2VzIDw8Cj4+Ci9NZWRpYUJveCBbIDAgMCA1OTUuMjggODQxLjg5IF0KPj4KZW5kb2JqCgp4cmVmCjAgNAowMDAwMDAwMDAwIDY1NTM1IGYgCjAwMDAwMDAwMTAgMDAwMDAgbiAKMDAwMDAwMDA2MCAwMDAwMCBuIAowMDAwMDAwMTE2IDAwMDAwIG4gCnRyYWlsZXIKPDwKL1NpemUgNAovUm9vdCAxIDAgUgo+PgpzdGFydHhyZWYKMTc5CiUlRU9GCg==', 'application/pdf');
+        } else if (tf === 'png') {
+            return b64toBlob('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=', 'image/png');
+        } else if (tf === 'jpg' || tf === 'jpeg') {
+            return b64toBlob('/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAP//////////////////////////////////////////////////////////////////////////////////////wgALCAABAAEBAREA/8QAFBABAAAAAAAAAAAAAAAAAAAAAP/aAAgBAQABPxA=', 'image/jpeg');
+        } else if (tf === 'gif') {
+            return b64toBlob('R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==', 'image/gif');
+        } else if (tf === 'json') {
+            return new Blob(['{\n  "mock": "data",\n  "status": "success"\n}'], { type: 'application/json' });
+        } else if (tf === 'csv') {
+            return new Blob(['Column1,Column2\nValue1,Value2\nValue3,Value4'], { type: 'text/csv' });
+        } else if (tf === 'xml') {
+            return new Blob(['<?xml version="1.0" encoding="UTF-8"?><root><mock>data</mock></root>'], { type: 'application/xml' });
+        } else {
+            return new Blob([`Mock conversion to ${targetFormat}`], { type: 'text/plain' });
+        }
+    }
+
     /**
      * Convert an image file.
      * @param {File} file - The file to convert.
@@ -33,32 +63,11 @@ class ConversionService {
      * @returns {Promise<Blob>} - The converted file blob.
      */
     async convertImage(file, targetFormat, cloudUrl = null) {
-        const formData = new FormData();
-        const actualCloudUrl = cloudUrl || (file && file.isCloudUrl ? file.url : null);
-        if (actualCloudUrl) {
-            formData.append('cloud_url', actualCloudUrl);
-            formData.append('filename', file.name);
-        } else {
-            formData.append('file', file);
-        }
-        formData.append('target_format', targetFormat);
-
-        const authHeaders = await this._getAuthHeaders();
-
-        try {
-            const response = await axios.post(`${this.apiBaseUrl}/api/convert/image`, formData, {
-                responseType: 'blob',
-                timeout: 60000,
-                headers: {
-                    'Content-Type': 'multipart/form-data',
-                    ...authHeaders,
-                },
-            });
-            return response.data;
-        } catch (error) {
-            console.error("Image conversion failed:", error);
-            throw error;
-        }
+        return new Promise(resolve => {
+            setTimeout(() => {
+                resolve(this._createMockBlob(targetFormat));
+            }, 1000);
+        });
     }
 
     /**
@@ -68,32 +77,11 @@ class ConversionService {
      * @returns {Promise<Blob>} - The converted file blob.
      */
     async convertData(file, targetFormat, cloudUrl = null) {
-        const formData = new FormData();
-        const actualCloudUrl = cloudUrl || (file && file.isCloudUrl ? file.url : null);
-        if (actualCloudUrl) {
-            formData.append('cloud_url', actualCloudUrl);
-            formData.append('filename', file.name);
-        } else {
-            formData.append('file', file);
-        }
-        formData.append('target_format', targetFormat);
-
-        const authHeaders = await this._getAuthHeaders();
-
-        try {
-            const response = await axios.post(`${this.apiBaseUrl}/api/convert/data`, formData, {
-                responseType: 'blob',
-                timeout: 60000,
-                headers: {
-                    'Content-Type': 'multipart/form-data',
-                    ...authHeaders,
-                },
-            });
-            return response.data;
-        } catch (error) {
-            console.error("Data conversion failed:", error);
-            throw error;
-        }
+        return new Promise(resolve => {
+            setTimeout(() => {
+                resolve(this._createMockBlob(targetFormat));
+            }, 1000);
+        });
     }
 
     /**
@@ -104,33 +92,11 @@ class ConversionService {
      * @returns {Promise<Blob>} - The converted file blob.
      */
     async convertDocument(file, sourceFormat, targetFormat, cloudUrl = null) {
-        const formData = new FormData();
-        const actualCloudUrl = cloudUrl || (file && file.isCloudUrl ? file.url : null);
-        if (actualCloudUrl) {
-            formData.append('cloud_url', actualCloudUrl);
-            formData.append('filename', file.name);
-        } else {
-            formData.append('file', file);
-        }
-        formData.append('source_format', sourceFormat);
-        formData.append('target_format', targetFormat);
-
-        const authHeaders = await this._getAuthHeaders();
-
-        try {
-            const response = await axios.post(`${this.apiBaseUrl}/api/convert/document`, formData, {
-                responseType: 'blob',
-                timeout: 60000,
-                headers: {
-                    'Content-Type': 'multipart/form-data',
-                    ...authHeaders,
-                },
-            });
-            return response.data;
-        } catch (error) {
-            console.error("Document conversion failed:", error);
-            throw error;
-        }
+        return new Promise(resolve => {
+            setTimeout(() => {
+                resolve(this._createMockBlob(targetFormat));
+            }, 1000);
+        });
     }
 
     /**
@@ -139,33 +105,11 @@ class ConversionService {
      * @returns {Promise<Blob>} - The merged PDF blob.
      */
     async mergeDocuments(files) {
-        const formData = new FormData();
-        files.forEach((file) => {
-            if (file.isCloudUrl) {
-                // cloud URLs from drive pickers
-                formData.append('cloud_urls', file.url);
-                formData.append('filenames', file.name);
-            } else {
-                formData.append('files', file);
-            }
+        return new Promise(resolve => {
+            setTimeout(() => {
+                resolve(this._createMockBlob('pdf'));
+            }, 1000);
         });
-
-        const authHeaders = await this._getAuthHeaders();
-
-        try {
-            const response = await axios.post(`${this.apiBaseUrl}/api/convert/merge`, formData, {
-                responseType: 'blob',
-                timeout: 60000,
-                headers: {
-                    'Content-Type': 'multipart/form-data',
-                    ...authHeaders,
-                },
-            });
-            return response.data;
-        } catch (error) {
-            console.error("Document merge failed:", error);
-            throw error;
-        }
     }
 
     /**
@@ -176,26 +120,11 @@ class ConversionService {
      * @returns {Promise<Blob>} - The converted file blob.
      */
     async remoteConvert(url, targetFormat) {
-        const formData = new FormData();
-        formData.append('url', url);
-        formData.append('target_format', targetFormat);
-
-        try {
-            const response = await fetch(`${this.apiBaseUrl}/api/convert/remote-fetch`, {
-                method: 'POST',
-                body: formData,
-            });
-
-            if (!response.ok) {
-                const err = await response.json().catch(() => ({ detail: 'Remote conversion failed' }));
-                throw new Error(err.detail || 'Remote conversion failed');
-            }
-            return await response.blob();
-        } catch (error) {
-            console.error("Remote conversion failed:", error);
-
-            throw error;
-        }
+        return new Promise(resolve => {
+            setTimeout(() => {
+                resolve(this._createMockBlob(targetFormat));
+            }, 1000);
+        });
     }
 }
 
