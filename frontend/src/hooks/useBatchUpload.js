@@ -14,8 +14,9 @@
 
 import { useState, useCallback, useRef } from 'react';
 import { supabase } from '../services/supabase';
+import { getApiBaseUrl } from '../config/api';
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+const API_BASE = getApiBaseUrl();
 
 async function _getAuthHeaders() {
     try {

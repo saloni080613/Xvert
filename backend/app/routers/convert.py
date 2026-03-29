@@ -567,8 +567,10 @@ async def remote_fetch_convert(
         filename_lower = file.filename.lower()
 
         # Image formats
-        if filename_lower.endswith(('.png', '.jpg', '.jpeg', '.gif')):
+        if filename_lower.endswith(('.png', '.jpg', '.jpeg', '.gif', '.webp')):
             detected_format = get_format_from_filename(file.filename)
+            if filename_lower.endswith('.webp'):
+                detected_format = "webp"
             content_type = "image"
         # Data formats
         elif filename_lower.endswith(('.json', '.csv', '.xlsx', '.xml')):
@@ -594,6 +596,9 @@ async def remote_fetch_convert(
                 content_type = "image"
             elif file_bytes.startswith(b'GIF8'):
                 detected_format = "gif"
+                content_type = "image"
+            elif len(file_bytes) >= 12 and file_bytes.startswith(b'RIFF') and file_bytes[8:12] == b'WEBP':
+                detected_format = "webp"
                 content_type = "image"
             elif file_bytes.startswith(b'%PDF'):
                 detected_format = "pdf"
@@ -647,17 +652,33 @@ async def remote_fetch_convert(
 
         if content_type == "image":
             target_format = target_format.lower()
-            if not validate_format(target_format):
-                # If it's an image-to-document conversion (like image -> pdf)
-                if target_format == "pdf":
-                    content_type = "document"
-                else:
+
+            # Image → PDF is a document conversion (handled by document_converter).
+            if target_format == "pdf":
+                content_type = "document"
+                try:
+                    output_path = await _convert_doc(
+                        file_bytes,
+                        file.filename or f"remote.{detected_format}",
+                        detected_format,
+                        target_format,
+                    )
+                    with open(output_path, "rb") as f:
+                        converted_bytes = f.read()
+                    if os.path.exists(output_path):
+                        os.remove(output_path)
+                    output_filename = get_output_filename(file.filename or f"remote.{detected_format}", target_format)
+                except ValueError as ve:
+                    raise HTTPException(status_code=400, detail=str(ve))
+                except Exception as ex:
+                    raise HTTPException(status_code=400, detail=f"Unsupported conversion or failure: {str(ex)}")
+
+            else:
+                if not validate_format(target_format):
                     raise HTTPException(
                         status_code=400,
                         detail=f"Invalid target format '{target_format}'. Allowed: png, jpg, jpeg, gif, pdf"
                     )
-
-            if content_type == "image":
                 if detected_format == target_format:
                     raise HTTPException(
                         status_code=400,

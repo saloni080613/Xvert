@@ -491,6 +491,10 @@ export default function Home() {
             )
             return
         }
+        if (!selectedTool?.target) {
+            addToast('Pick a conversion tool first.', 'error')
+            return
+        }
         setMascotState('converting')
         try {
 
@@ -523,10 +527,7 @@ export default function Home() {
 
                 addToast('Conversion successful! 🎉', 'success')
                 saveRecent(selectedTool.name, selectedTool.target)
-                setTimeout(() => {
-                    setProgress(0)
-                    setMascotState('idle')
-                }, 3000)
+                setTimeout(() => setMascotState('idle'), 3000)
                 return // batch handles its own downloading/UI
             }
 
@@ -542,34 +543,23 @@ export default function Home() {
 
         } catch (error) {
             console.error(error)
-            clearInterval(progressInterval)
-            clearTimeout(timer)
-            let errMsg = 'Conversion failed. Please try again.';
+            let errMsg = 'Conversion failed. Please try again.'
             if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
-                errMsg = 'Conversion timed out. File may be too large.';
-            } else {
-                const detail = await (error.response?.data instanceof Blob ? error.response.data.text() : null);
-                if (detail) {
-                    try {
-                        errMsg = JSON.parse(detail).detail || detail;
-                    } catch (e) {
-                        errMsg = detail;
-                    }
-                } else if (error.message) {
-                    errMsg = error.message;
+                errMsg = 'Conversion timed out. File may be too large.'
+            } else if (error.response?.data instanceof Blob) {
+                try {
+                    const text = await error.response.data.text()
+                    const parsed = JSON.parse(text)
+                    const d = parsed.detail
+                    errMsg = typeof d === 'string' ? d : (d != null ? JSON.stringify(d) : text)
+                } catch {
+                    errMsg = error.message || errMsg
                 }
+            } else if (error.message) {
+                errMsg = error.message
             }
             addToast(errMsg, 'error')
-            setProgress(0)
-            setLoading(false)
-
             setMascotState('error')
-            addToast(
-                err?.code === 'ECONNABORTED' || err?.message?.includes('timeout')
-                    ? 'Timed out — files may be too large.'
-                    : 'Batch conversion failed. Please try again.',
-                'error'
-            )
             setTimeout(() => setMascotState('idle'), 3000)
         }
     }
@@ -1152,7 +1142,7 @@ export default function Home() {
                                             padding: '2.5rem 2rem',
                                             backgroundColor: 'var(--ag-dropzone-bg)',
                                             position: 'relative',
-                                            maxWidth: '500px',
+                                            maxWidth: '760px',
                                             margin: '0 auto 2rem',
                                             cursor: 'pointer',
                                         }}
@@ -1265,27 +1255,38 @@ export default function Home() {
                                 )}
 
                                 {/* Remote Fetch Component (moved outside dropzone to be interactive) */}
-                                {!resultUrl && (
-                                    <RemoteFetch
-                                        targetFormat={selectedTool?.target || tools.find(t => t.id === selectedTool?.id)?.target}
-                                        allowedSourceFormats={(() => {
-                                            const tool = selectedTool;
-                                            if (!tool) return null;
-                                            if (tool.id === 'merge-pdf' || tool.type === 'pdf') return ['pdf'];
-                                            if (tool.type === 'docx') return ['docx'];
-                                            if (tool.type === 'image') return ['png', 'jpg', 'jpeg', 'gif'];
-                                            if (tool.type === 'jpg') return ['jpg', 'jpeg'];
-                                            if (tool.type === 'png') return ['png'];
-                                            if (tool.type === 'gif') return ['gif'];
-                                            if (tool.type === 'data') return ['json', 'csv', 'xlsx', 'xml'];
-                                            return null;
-                                        })()}
-                                        url={remoteUrl}
-                                        onUrlChange={setRemoteUrl}
-                                        onSubmit={handleConvert}
-                                        isConverting={isConverting}
-                                    />
-                                )}
+                                        {!resultUrl && (
+                                            <div
+                                                style={{
+                                                    width: '100%',
+                                                    marginTop: '1.25rem',
+                                                    paddingTop: '1.25rem',
+                                                    borderTop: '1px solid var(--ag-glass-border)',
+                                                }}
+                                            >
+                                                <RemoteFetch
+                                                    variant="flat"
+                                                    hideTitle={true}
+                                                    targetFormat={selectedTool?.target || tools.find(t => t.id === selectedTool?.id)?.target}
+                                                    allowedSourceFormats={(() => {
+                                                        const tool = selectedTool;
+                                                        if (!tool) return null;
+                                                        if (tool.id === 'merge-pdf' || tool.type === 'pdf') return ['pdf'];
+                                                        if (tool.type === 'docx') return ['docx'];
+                                                        if (tool.type === 'image') return ['png', 'jpg', 'jpeg', 'gif'];
+                                                        if (tool.type === 'jpg') return ['jpg', 'jpeg'];
+                                                        if (tool.type === 'png') return ['png'];
+                                                        if (tool.type === 'gif') return ['gif'];
+                                                        if (tool.type === 'data') return ['json', 'csv', 'xlsx', 'xml'];
+                                                        return null;
+                                                    })()}
+                                                    url={remoteUrl}
+                                                    onUrlChange={setRemoteUrl}
+                                                    onSubmit={handleConvert}
+                                                    isConverting={isConverting}
+                                                />
+                                            </div>
+                                        )}
 
                                 {/* Action Buttons */}
 
@@ -1314,6 +1315,7 @@ export default function Home() {
                                 ) : (
 
                                     <motion.button
+                                        type="button"
                                         onClick={handleConvert}
                                         disabled={!canConvert}
                                         className="ag-btn-primary"

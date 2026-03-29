@@ -12,8 +12,19 @@ import { useToast } from './ToastContext';
  *   onUrlChange          (fn)       — called when the url input changes
  *   isConverting         (bool)     — disables the input while the parent is busy
  *   onSubmit             (fn)       — called when the user hits Enter so it can trigger the Convert button
+ *   variant             (string)   — 'card' (default) or 'flat' (embed into parent card)
+ *   hideTitle           (bool)     — hide the "Fetch from URL" heading when embedding
  */
-const RemoteFetch = ({ url, onUrlChange, onSubmit, isConverting, allowedSourceFormats = null, targetFormat = null }) => {
+const RemoteFetch = ({
+    url,
+    onUrlChange,
+    onSubmit,
+    isConverting,
+    allowedSourceFormats = null,
+    targetFormat = null,
+    variant = 'card',
+    hideTitle = false,
+}) => {
     const { addToast } = useToast();
 
     const handleUrlSubmit = () => {
@@ -30,43 +41,47 @@ const RemoteFetch = ({ url, onUrlChange, onSubmit, isConverting, allowedSourceFo
         }
     };
 
+    const isFlat = variant === 'flat';
+
     return (
         <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             style={{
-                background: 'var(--ag-card-bg, #fff)',
-                backdropFilter: 'blur(8px)',
-                border: '1px solid var(--ag-card-border, #e0e0e0)',
-                borderRadius: '12px',
-                padding: '1.25rem 1.5rem',
-                marginBottom: '1.5rem',
+                background: isFlat ? 'transparent' : 'var(--ag-card-bg, #fff)',
+                backdropFilter: isFlat ? 'none' : 'blur(8px)',
+                border: isFlat ? 'none' : '1px solid var(--ag-card-border, #e0e0e0)',
+                borderRadius: isFlat ? '0px' : '12px',
+                padding: isFlat ? '0px' : '1.25rem 1.5rem',
+                marginBottom: isFlat ? '0px' : '1.5rem',
             }}
         >
-            <h3 style={{
-                color: 'var(--ag-text, #1D3557)',
-                marginBottom: '0.85rem',
-                fontSize: '1.05rem',
-                fontWeight: '700',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-            }}>
-                🌐 Fetch from URL
-                {targetFormat && (
-                    <span style={{
-                        fontSize: '0.75rem',
-                        background: 'rgba(168, 218, 220, 0.3)',
-                        color: 'var(--ag-accent)',
-                        borderRadius: '20px',
-                        padding: '0.2rem 0.7rem',
-                        fontWeight: '800',
-                        border: '1px solid var(--ag-accent)',
-                    }}>
-                        → {targetFormat.toUpperCase()}
-                    </span>
-                )}
-            </h3>
+            {!hideTitle && (
+                <h3 style={{
+                    color: 'var(--ag-text, #1D3557)',
+                    marginBottom: '0.85rem',
+                    fontSize: '1.05rem',
+                    fontWeight: '700',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                }}>
+                    🌐 Fetch from URL
+                    {targetFormat && (
+                        <span style={{
+                            fontSize: '0.75rem',
+                            background: 'rgba(168, 218, 220, 0.3)',
+                            color: 'var(--ag-accent)',
+                            borderRadius: '20px',
+                            padding: '0.2rem 0.7rem',
+                            fontWeight: '800',
+                            border: '1px solid var(--ag-accent)',
+                        }}>
+                            → {targetFormat.toUpperCase()}
+                        </span>
+                    )}
+                </h3>
+            )}
 
             <div style={{ display: 'flex', gap: '0.8rem' }}>
                 <input
@@ -92,7 +107,7 @@ const RemoteFetch = ({ url, onUrlChange, onSubmit, isConverting, allowedSourceFo
                 />
             </div>
 
-            <div style={{ fontSize: '0.8rem', color: 'var(--ag-text-secondary, #666)', marginTop: '0.8rem', opacity: 0.8 }}>
+            <div style={{ fontSize: '0.8rem', color: 'var(--ag-text-secondary, #666)', marginTop: isFlat ? '0.6rem' : '0.8rem', opacity: 0.8 }}>
                 <strong>Tip:</strong> Press Enter to select. Any public Google Drive or Dropbox link works.
                 {allowedSourceFormats && (
                     <div style={{ marginTop: '0.3rem' }}>

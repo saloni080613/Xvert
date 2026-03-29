@@ -5,6 +5,8 @@ import traceback
 import sys
 from pdf2docx import Converter
 from functools import partial
+from PIL import Image
+import fitz
 
 try:
     from docx2pdf import convert as docx2pdf_convert
@@ -68,10 +70,24 @@ async def convert_document(file_content: bytes, filename: str, source_format: st
                     raise ImportError("docx2pdf module not installed or available. Please run: pip install docx2pdf pywin32")
 
             # --- Image to PDF ---
-            elif source_format.lower() in ["jpg", "jpeg", "png", "image"] and target_format == "pdf":
+            elif source_format.lower() in ["jpg", "jpeg", "png", "gif", "image", "webp"] and target_format == "pdf":
                 with Image.open(input_path) as img:
-                    if img.mode != 'RGB':
-                        img = img.convert('RGB')
+                    if getattr(img, "n_frames", 1) > 1:
+                        img.seek(0)
+                    if img.mode in ("RGBA", "LA"):
+                        background = Image.new("RGB", img.size, (255, 255, 255))
+                        if img.mode == "RGBA":
+                            background.paste(img, mask=img.split()[3])
+                        else:
+                            background.paste(img.convert("RGBA"), mask=img.split()[1])
+                        img = background
+                    elif img.mode == "P" and "transparency" in img.info:
+                        img = img.convert("RGBA")
+                        background = Image.new("RGB", img.size, (255, 255, 255))
+                        background.paste(img, mask=img.split()[3])
+                        img = background
+                    elif img.mode != "RGB":
+                        img = img.convert("RGB")
                     img.save(output_path, "PDF", resolution=100.0)
 
             # --- PDF to Image (First Page Only) ---

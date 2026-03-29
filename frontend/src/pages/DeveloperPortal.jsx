@@ -10,6 +10,7 @@ import Navbar from '../components/Navbar'
 import UserAvatar from '../components/UserAvatar'
 import { useToast } from '../components/ToastContext'
 import axios from 'axios'
+import { getApiBaseUrl } from '../config/api'
 
 const springBounce = { type: 'spring', stiffness: 400, damping: 20 }
 
@@ -20,7 +21,7 @@ export default function DeveloperPortal() {
     const [loading, setLoading] = useState(true)
     const [activeTab, setActiveTab] = useState('keys')
 
-    const apiBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+    const apiBaseUrl = getApiBaseUrl()
 
     const [keys, setKeys] = useState([])
     const [showKeyModal, setShowKeyModal] = useState(false)

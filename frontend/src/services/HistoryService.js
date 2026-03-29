@@ -6,6 +6,7 @@
  */
 
 import { supabase } from './supabase'
+import { getApiBaseUrl } from '../config/api'
 
 const historyService = {
     /**
@@ -29,7 +30,7 @@ const historyService = {
      * @param {string} id - Conversion UUID
      */
     deleteConversion: async (id) => {
-        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+        const apiUrl = getApiBaseUrl()
         const { data: { session } } = await supabase.auth.getSession()
 
         if (!session?.access_token) throw new Error('Not authenticated')
@@ -53,7 +54,7 @@ const historyService = {
      * @returns {Promise<{download_url: string, filename: string}>}
      */
     getDownloadUrl: async (conversionId) => {
-        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+        const apiUrl = getApiBaseUrl()
         const { data: { session } } = await supabase.auth.getSession()
 
         if (!session?.access_token) throw new Error('Not authenticated')

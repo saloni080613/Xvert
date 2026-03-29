@@ -35,6 +35,8 @@ async def convert_document_endpoint(
     cloud_url: Optional[str] = Form(None),
     filename: Optional[str] = Form(None)
 ):
+    user_id = await get_optional_user(request)
+
     # Ensure file or cloud_url is provided
     if not file and not cloud_url:
         raise HTTPException(status_code=400, detail="Must provide either file or cloud_url")
