@@ -13,6 +13,8 @@ import GoogleDrivePicker from '../components/GoogleDrivePicker'
 import RemoteFetch from '../components/RemoteFetch'
 import { useToast } from '../components/ToastContext'
 import { useBatchUpload } from '../hooks/useBatchUpload'
+import DropboxSaver from '../components/DropboxSaver'
+import GoogleDriveSaver from '../components/GoogleDriveSaver'
 import ProgressCard from '../components/ProgressCard'
 import OcrResultPanel from '../components/OcrResultPanel'
 import { Search, X, FileImage, FileText, Database, Layers, Command, Upload, Sparkles, ArrowRight } from 'lucide-react'
@@ -256,13 +258,19 @@ export default function Home() {
     const resultUrl = useMemo(() => resultBlob ? URL.createObjectURL(resultBlob) : null, [resultBlob])
     const [extractedText, setExtractedText] = useState(null)
     const [ocrDone, setOcrDone] = useState(false)
-    const [isOcrConverting, setIsOcrConverting] = useState(false)
-    const isConverting = ['uploading', 'processing'].includes(batchStatus) || isOcrConverting
-    const isDone = batchStatus === 'done'
+    const [isProcessing, setIsProcessing] = useState(false)
+    const [processingProgress, setProcessingProgress] = useState(0)
+
+    const isConverting = ['uploading', 'processing'].includes(batchStatus) || isProcessing
+    const isDone = batchStatus === 'done' || (resultBlob && !isProcessing && !['uploading', 'processing'].includes(batchStatus))
     const fileStatesValues = Object.values(fileStates)
-    const overallProgress = fileStatesValues.length > 0
-        ? Math.round(fileStatesValues.reduce((s, f) => s + (f.progress ?? 0), 0) / fileStatesValues.length)
-        : 0
+    const overallProgress = isProcessing
+        ? processingProgress
+        : ((resultBlob && !isProcessing)
+            ? 100
+            : (fileStatesValues.length > 0
+                ? Math.round(fileStatesValues.reduce((s, f) => s + (f.progress ?? 0), 0) / fileStatesValues.length)
+                : 0))
     const canConvert = (pendingFiles.length > 0 || (remoteUrl && remoteUrl.trim() !== '')) &&
         (selectedTool?.id !== 'merge-pdf' || (pendingFiles.length >= 2 || (remoteUrl && remoteUrl.trim() !== '' && pendingFiles.length >= 1)))
     // UX enhancement states
@@ -410,24 +418,22 @@ export default function Home() {
             const newFiles = fileArray.map((f) => ({
                 name: f.name,
                 url: f.url,
-                isCloudUrl: true
+                isRemote: true
             }))
-            setFiles(prev => [...prev, ...newFiles])
-            setFile(null)
+            setPendingFiles(prev => [...prev, ...newFiles])
             setMessage('')
         } else {
             const fileInfo = fileArray[0]
             if (fileInfo) {
                 setFile({
                     name: fileInfo.name,
-                    url: fileInfo.url,
-                    isCloudUrl: true
+                    url: fileInfo.link || fileInfo.url, // Dropbox uses .link
+                    isRemote: true
                 })
                 setMessage('')
                 setMascotState('fileUploaded')
                 setTimeout(() => setMascotState('idle'), 2000)
             }
-            setFiles([])
         }
     }
 
@@ -496,8 +502,17 @@ export default function Home() {
             return
         }
         setMascotState('converting')
-        try {
+        setIsProcessing(true)
+        setProcessingProgress(0)
 
+        const simulatedProgressInterval = setInterval(() => {
+            setProcessingProgress(prev => {
+                if (prev >= 95) return prev
+                return prev + Math.floor(Math.random() * 5) + 2
+            })
+        }, 800)
+
+        try {
             let resultBlob
             const trimmedUrl = remoteUrl?.trim();
             console.log("trimmedUrl:", trimmedUrl)
@@ -506,8 +521,21 @@ export default function Home() {
                 console.log("Calling remoteConvert for:", trimmedUrl, "target:", selectedTool?.target)
                 resultBlob = await conversionService.remoteConvert(trimmedUrl, selectedTool?.target)
                 console.log("remoteConvert returned:", resultBlob)
-            } else if (file && file.isRemote) {
-                resultBlob = await conversionService.remoteConvert(file.url, selectedTool.target)
+            } else if (file && (file.isRemote || file.isCloudUrl)) {
+                // If it's a specific tool like PDF to Word, use the specific endpoint if possible, 
+                // otherwise fallback to remote-fetch
+                const cUrl = file.url
+                if (selectedTool.type === 'pdf' && selectedTool.id !== 'merge-pdf') {
+                    resultBlob = await conversionService.convertDocument(null, 'pdf', selectedTool.target, cUrl)
+                } else if (selectedTool.type === 'image') {
+                    resultBlob = await conversionService.convertImage(null, selectedTool.target, cUrl)
+                } else if (selectedTool.type === 'docx') {
+                    resultBlob = await conversionService.convertDocument(null, 'docx', 'pdf', cUrl)
+                } else if (selectedTool.type === 'data') {
+                    resultBlob = await conversionService.convertData(null, selectedTool.target, cUrl)
+                } else {
+                    resultBlob = await conversionService.remoteConvert(cUrl, selectedTool.target)
+                }
             } else if (selectedTool.id === 'merge-pdf') {
                 resultBlob = await conversionService.mergeDocuments(files)
             } else if (selectedTool.id === 'image-to-pdf') {
@@ -520,28 +548,35 @@ export default function Home() {
                 resultBlob = await conversionService.convertDocument(file, 'docx', 'pdf')
             } else if (selectedTool.type === 'data') {
                 resultBlob = await conversionService.convertData(file, selectedTool.target)
-
             } else {
+                clearInterval(simulatedProgressInterval); // batch handles its own
+                setIsProcessing(false);
                 await startBatch(pendingFiles, selectedTool.target)
                 setMascotState('success')
-
                 addToast('Conversion successful! 🎉', 'success')
                 saveRecent(selectedTool.name, selectedTool.target)
                 setTimeout(() => setMascotState('idle'), 3000)
-                return // batch handles its own downloading/UI
+                return
             }
 
             if (resultBlob) {
+                clearInterval(simulatedProgressInterval)
+                setProcessingProgress(100)
                 setResultBlob(resultBlob)
                 setMascotState('success')
                 addToast('Conversion successful! 🎉', 'success')
                 saveRecent(selectedTool.name, selectedTool.target)
-                setTimeout(() => setMascotState('idle'), 3000)
+                setTimeout(() => {
+                    setMascotState('idle')
+                    setIsProcessing(false)
+                }, 3000)
             } else {
                 throw new Error('Conversion returned an empty result.')
             }
 
         } catch (error) {
+            clearInterval(simulatedProgressInterval)
+            setIsProcessing(false)
             console.error(error)
             let errMsg = 'Conversion failed. Please try again.'
             if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
@@ -1055,61 +1090,87 @@ export default function Home() {
                                 className="glass-panel"
                                 style={{ padding: '2.5rem', position: 'relative' }}
                             >
-                                <motion.div
-                                    animate={{ y: [0, -8, 0], rotate: [0, 3, -3, 0] }}
-                                    transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut' }}
-                                    style={{
-                                        position: 'absolute',
-                                        top: '-40px',
-                                        right: '20px',
-                                        width: '110px', height: '110px',
-                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                    }}
-                                >
-                                    <img
-                                        src="/illustrations/conversion.png"
-                                        alt="Astronaut converting"
-                                        style={{ width: '100%', height: 'auto' }}
-                                    />
-                                </motion.div>
-
-                                {/* Tool Icon */}
-                                <div style={{ marginBottom: '1.2rem', display: 'flex', justifyContent: 'center' }}>
+                                {/* Floating decoration mascot - hidden during conversion */}
+                                {!isConverting && (
                                     <motion.div
-                                        style={{ transform: 'scale(1.5)' }}
-                                        animate={{ rotate: [0, 2, -2, 0] }}
-                                        transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
+                                        initial={{ opacity: 0, scale: 0.8 }}
+                                        animate={{ opacity: 1, scale: 1, y: [0, -8, 0], rotate: [0, 3, -3, 0] }}
+                                        transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut' }}
+                                        style={{
+                                            position: 'absolute',
+                                            top: '-40px',
+                                            right: '20px',
+                                            width: '110px', height: '110px',
+                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                            zIndex: 2,
+                                        }}
                                     >
-                                        <ToolIcon tool={selectedTool} />
+                                        <img
+                                            src="/illustrations/conversion.png"
+                                            alt="Astronaut decoration"
+                                            style={{ width: '100%', height: 'auto' }}
+                                        />
                                     </motion.div>
-                                </div>
+                                )}
 
-                                <h2 style={{
-                                    fontFamily: '"Outfit", sans-serif',
-                                    fontSize: '1.8rem',
-                                    color: 'var(--ag-text)',
-                                    marginBottom: '0.5rem',
-                                    fontWeight: 700,
-                                }}>{selectedTool.name}</h2>
-                                <p style={{
-                                    color: 'var(--ag-text-secondary)',
-                                    marginBottom: '2rem',
-                                    fontSize: '0.95rem',
-                                }}>{selectedTool.desc}</p>
-
-                                {/* Orbital Progress (when converting or done) */}
-                                {(isConverting || isDone) && (
+                                {/* Tool Header - hidden during conversion and result phases */}
+                                {!isConverting && !isDone && (
                                     <>
+                                        <div style={{ marginBottom: '1.2rem', display: 'flex', justifyContent: 'center' }}>
+                                            <motion.div
+                                                style={{ transform: 'scale(1.5)' }}
+                                                animate={{ rotate: [0, 2, -2, 0] }}
+                                                transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
+                                            >
+                                                <ToolIcon tool={selectedTool} />
+                                            </motion.div>
+                                        </div>
+
+                                        <h2 style={{
+                                            fontFamily: '"Outfit", sans-serif',
+                                            fontSize: '1.8rem',
+                                            color: 'var(--ag-text)',
+                                            marginBottom: '0.5rem',
+                                            fontWeight: 700,
+                                        }}>{selectedTool.name}</h2>
+                                        <p style={{
+                                            color: 'var(--ag-text-secondary)',
+                                            marginBottom: '2rem',
+                                            fontSize: '0.95rem',
+                                        }}>{selectedTool.desc}</p>
+                                    </>
+                                )}
+
+                                {/* Orbital Progress + Mascot Centerpiece */}
+                                {(isConverting || isDone) && (
+                                    <div style={{ position: 'relative', minHeight: '280px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                                        {/* Tool Icon - Centered inside ring during conversion */}
+                                        <motion.div
+                                            initial={{ opacity: 0, scale: 0.5 }}
+                                            animate={{ opacity: 1, scale: 1.8 }}
+                                            transition={springBounce}
+                                            style={{
+                                                zIndex: 1,
+                                                marginBottom: '1rem',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                            }}
+                                        >
+                                            <ToolIcon tool={selectedTool} />
+                                        </motion.div>
+
                                         <OrbitalProgress progress={overallProgress} />
-                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(190px,1fr))', gap: '0.75rem', marginBottom: '1.5rem', textAlign: 'left' }}>
+
+                                        <div style={{ width: '100%', maxWidth: '600px', display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(190px,1fr))', gap: '0.75rem', marginTop: '2rem', textAlign: 'left' }}>
                                             {Object.entries(fileStates).map(([id, state]) => (
                                                 <ProgressCard key={id} filename={state.filename} progress={state.progress} status={state.status} downloadUrl={state.downloadUrl} />
                                             ))}
                                         </div>
-                                    </>
+                                    </div>
                                 )}
 
-                                {/* Drag & Drop Zone */}
+                                {/* Source Selection (Drag & Drop + URL) */}
                                 {!isConverting && !isDone && !ocrDone && (
                                     <motion.div
                                         animate={isDraggingOver ? {
@@ -1143,7 +1204,7 @@ export default function Home() {
                                             backgroundColor: 'var(--ag-dropzone-bg)',
                                             position: 'relative',
                                             maxWidth: '760px',
-                                            margin: '0 auto 2rem',
+                                            margin: '0 auto 1.5rem',
                                             cursor: 'pointer',
                                         }}
                                     >
@@ -1183,20 +1244,12 @@ export default function Home() {
                                                     Click box or use cloud pickers below to add more files
                                                 </div>
 
-                                                {/* Cloud Storage Icons - For adding more PDFs */}
-                                                {!resultUrl && (
+                                                {/* Cloud Storage Icons */}
+                                                {!resultBlob && (
                                                     <div style={{ display: 'flex', gap: '1.2rem', alignItems: 'center', justifyContent: 'center', position: 'relative', zIndex: 10, marginTop: '1rem', pointerEvents: 'auto' }} onClick={(e) => e.stopPropagation()}>
                                                         <div style={{ width: '40px', height: '1px', background: 'linear-gradient(90deg, transparent, var(--ag-glass-border))', opacity: 0.4 }} />
-                                                        <DropboxPicker
-                                                            onFileSelected={handleDropboxSelect}
-                                                            acceptTypes={getAcceptTypes(selectedTool)}
-                                                            multiselect={true}
-                                                        />
-                                                        <GoogleDrivePicker
-                                                            onFileSelected={handleFileChange}
-                                                            acceptTypes={getAcceptTypes(selectedTool)}
-                                                            multiselect={true}
-                                                        />
+                                                        <DropboxPicker onFileSelected={handleDropboxSelect} acceptTypes={getAcceptTypes(selectedTool)} multiselect={true} />
+                                                        <GoogleDrivePicker onFileSelected={handleFileChange} acceptTypes={getAcceptTypes(selectedTool)} multiselect={true} />
                                                         <div style={{ width: '40px', height: '1px', background: 'linear-gradient(90deg, var(--ag-glass-border), transparent)', opacity: 0.4 }} />
                                                     </div>
                                                 )}
@@ -1204,8 +1257,8 @@ export default function Home() {
                                         ) : pendingFiles.length > 0 ? (
                                             <FilePreview file={pendingFiles[0]} />
                                         ) : (
-                                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1.5rem', paddingTop: '0.5rem' }}>
-                                                {/* Select File Button - Large and Prominent */}
+                                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1.25rem', paddingTop: '0.5rem' }}>
+                                                {/* Select File Button */}
                                                 <motion.div
                                                     whileHover={{ scale: 1.06, boxShadow: '0 8px 30px var(--ag-accent-glow)' }}
                                                     whileTap={{ scale: 0.98 }}
@@ -1213,107 +1266,106 @@ export default function Home() {
                                                     style={{
                                                         background: 'var(--ag-btn-primary)',
                                                         color: 'var(--ag-btn-primary-text)',
-                                                        padding: '1rem 3rem',
+                                                        padding: '0.9rem 2.8rem',
                                                         borderRadius: '60px',
                                                         display: 'inline-flex',
                                                         alignItems: 'center',
                                                         justifyContent: 'center',
                                                         fontWeight: 700,
                                                         boxShadow: '0 6px 25px var(--ag-accent-glow)',
-                                                        fontSize: '1.05rem',
+                                                        fontSize: '1rem',
                                                         cursor: 'pointer',
-                                                        transition: 'all 0.2s ease',
                                                     }}
                                                 >
                                                     Select {selectedTool.type === 'image' ? 'Image' : selectedTool.id === 'merge-pdf' ? 'PDFs' : 'File'}
                                                 </motion.div>
 
-                                                {/* Cloud Storage Icons - Below Button */}
-                                                {!resultUrl && (
+                                                {/* Cloud Storage Icons */}
+                                                {!resultBlob && (
                                                     <div style={{ display: 'flex', gap: '1.2rem', alignItems: 'center', justifyContent: 'center', position: 'relative', zIndex: 10 }} onClick={(e) => e.stopPropagation()}>
-                                                        {/* Divider Above Icons */}
-                                                        <div style={{ width: '60px', height: '2px', background: 'linear-gradient(90deg, transparent, var(--ag-glass-border))', opacity: 0.4 }} />
-
-                                                        <DropboxPicker
-                                                            onFileSelected={handleDropboxSelect}
-                                                            acceptTypes={getAcceptTypes(selectedTool)}
-                                                            multiselect={selectedTool.id === 'merge-pdf'}
-                                                        />
-                                                        <GoogleDrivePicker
-                                                            onFileSelected={handleFileChange}
-                                                            acceptTypes={getAcceptTypes(selectedTool)}
-                                                            multiselect={selectedTool.id === 'merge-pdf'}
-                                                        />
-                                                        <div style={{ width: '60px', height: '2px', background: 'linear-gradient(90deg, var(--ag-glass-border), transparent)', opacity: 0.4 }} />
+                                                        <DropboxPicker onFileSelected={handleDropboxSelect} acceptTypes={getAcceptTypes(selectedTool)} multiselect={selectedTool.id === 'merge-pdf'} />
+                                                        <GoogleDrivePicker onFileSelected={handleFileChange} acceptTypes={getAcceptTypes(selectedTool)} multiselect={selectedTool.id === 'merge-pdf'} />
                                                     </div>
                                                 )}
 
-                                                <p style={{ color: 'var(--ag-text-secondary)', fontSize: '0.85rem', margin: 0 }}>or drag & drop file here</p>
+                                                <p style={{ color: 'var(--ag-text-secondary)', fontSize: '0.8rem', margin: 0 }}>or drag & drop file here</p>
+
+                                                {/* OR Divider */}
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', width: '100%', margin: '0.5rem 0', opacity: 0.4 }}>
+                                                    <div style={{ flex: 1, height: '1px', background: 'var(--ag-glass-border)' }} />
+                                                    <span style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--ag-text-secondary)', textTransform: 'uppercase', letterSpacing: '1px' }}>OR</span>
+                                                    <div style={{ flex: 1, height: '1px', background: 'var(--ag-glass-border)' }} />
+                                                </div>
+
+                                                {/* URL Input Integrated */}
+                                                <div
+                                                    style={{ width: '100%', position: 'relative', zIndex: 10, pointerEvents: 'auto' }}
+                                                    onClick={(e) => e.stopPropagation()}
+                                                >
+                                                    <RemoteFetch
+                                                        variant="flat"
+                                                        hideTitle={true}
+                                                        targetFormat={selectedTool?.target || tools.find(t => t.id === selectedTool?.id)?.target}
+                                                        allowedSourceFormats={(() => {
+                                                            const tool = selectedTool;
+                                                            if (!tool) return null;
+                                                            if (tool.id === 'merge-pdf' || tool.type === 'pdf') return ['pdf'];
+                                                            if (tool.type === 'docx') return ['docx'];
+                                                            if (tool.type === 'image') return ['png', 'jpg', 'jpeg', 'gif'];
+                                                            if (tool.type === 'jpg') return ['jpg', 'jpeg'];
+                                                            if (tool.type === 'png') return ['png'];
+                                                            if (tool.type === 'gif') return ['gif'];
+                                                            if (tool.type === 'data') return ['json', 'csv', 'xlsx', 'xml'];
+                                                            return null;
+                                                        })()}
+                                                        url={remoteUrl}
+                                                        onUrlChange={setRemoteUrl}
+                                                        onSubmit={handleConvert}
+                                                        isConverting={isConverting}
+                                                    />
+                                                </div>
                                             </div>
                                         )}
                                     </motion.div>
                                 )}
 
-                                {/* Remote Fetch Component (moved outside dropzone to be interactive) */}
-                                        {!resultUrl && (
-                                            <div
-                                                style={{
-                                                    width: '100%',
-                                                    marginTop: '1.25rem',
-                                                    paddingTop: '1.25rem',
-                                                    borderTop: '1px solid var(--ag-glass-border)',
-                                                }}
-                                            >
-                                                <RemoteFetch
-                                                    variant="flat"
-                                                    hideTitle={true}
-                                                    targetFormat={selectedTool?.target || tools.find(t => t.id === selectedTool?.id)?.target}
-                                                    allowedSourceFormats={(() => {
-                                                        const tool = selectedTool;
-                                                        if (!tool) return null;
-                                                        if (tool.id === 'merge-pdf' || tool.type === 'pdf') return ['pdf'];
-                                                        if (tool.type === 'docx') return ['docx'];
-                                                        if (tool.type === 'image') return ['png', 'jpg', 'jpeg', 'gif'];
-                                                        if (tool.type === 'jpg') return ['jpg', 'jpeg'];
-                                                        if (tool.type === 'png') return ['png'];
-                                                        if (tool.type === 'gif') return ['gif'];
-                                                        if (tool.type === 'data') return ['json', 'csv', 'xlsx', 'xml'];
-                                                        return null;
-                                                    })()}
-                                                    url={remoteUrl}
-                                                    onUrlChange={setRemoteUrl}
-                                                    onSubmit={handleConvert}
-                                                    isConverting={isConverting}
-                                                />
-                                            </div>
-                                        )}
+
 
                                 {/* Action Buttons */}
-
-                                {resultUrl ? (
+                                {resultBlob ? (
                                     <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
                                         <motion.button
                                             onClick={() => {
                                                 const link = document.createElement('a')
                                                 link.href = resultUrl
-                                                link.setAttribute('download', `converted_${selectedTool.target === 'pdf' ? 'document' : (files.length > 0 ? 'merged' : file.name?.split('.')[0])}.${selectedTool.target}`)
+                                                const baseName = selectedTool?.target === 'pdf' ? 'document' : (files.length > 0 ? 'merged' : (file?.name?.split('.')[0] || 'remote_result'))
+                                                link.setAttribute('download', `converted_${baseName}.${selectedTool?.target || 'file'}`)
                                                 document.body.appendChild(link)
                                                 link.click()
                                                 link.remove()
                                             }}
                                             className="ag-btn-primary"
-                                            whileHover={{ scale: 1.06 }}
+                                            whileHover={{ scale: 1.05 }}
                                             whileTap={{ scale: 0.95 }}
                                             transition={springBounce}
                                             initial={{ scale: 0.9, opacity: 0 }}
                                             animate={{ scale: 1, opacity: 1 }}
-                                            style={{ display: 'block', minWidth: '180px' }}
+                                            style={{ minWidth: '160px' }}
                                         >
                                             Download
                                         </motion.button>
+
+                                        <GoogleDriveSaver 
+                                            downloadUrl={resultUrl} 
+                                            filename={`converted_${selectedTool?.target === 'pdf' ? 'document' : (files.length > 0 ? 'merged' : (file?.name?.split('.')[0] || 'remote_result'))}.${selectedTool?.target || 'file'}`} 
+                                        />
+
+                                        <DropboxSaver 
+                                            downloadUrl={resultUrl} 
+                                            filename={`converted_${selectedTool?.target === 'pdf' ? 'document' : (files.length > 0 ? 'merged' : (file?.name?.split('.')[0] || 'remote_result'))}.${selectedTool?.target || 'file'}`} 
+                                        />
                                     </div>
                                 ) : (
-
                                     <motion.button
                                         type="button"
                                         onClick={handleConvert}
@@ -1326,23 +1378,12 @@ export default function Home() {
                                             display: 'block',
                                             margin: '0 auto',
                                             minWidth: '200px',
-                                            position: 'relative',
-                                            overflow: 'hidden',
                                         }}
                                     >
                                         <span style={{ position: 'relative', zIndex: 1 }}>
                                             Convert
                                         </span>
-                                        {canConvert && (
-                                            <span style={{
-                                                marginLeft: '0.5rem',
-                                                fontSize: '0.7rem',
-                                                opacity: 0.7,
-                                                padding: '1px 5px',
-                                                borderRadius: '3px',
-                                                border: '1px solid rgba(255,255,255,0.3)',
-                                            }}>↵</span>
-                                        )}
+
                                     </motion.button>
                                 )}
 

@@ -7,9 +7,12 @@ Helper functions for file handling, validation, and naming.
 
 import os
 from typing import Optional
-import urllib.request
 import io
 from fastapi import UploadFile
+try:
+    import requests as _requests
+except ImportError:
+    _requests = None
 
 
 # Map of extensions to their normalized format names
@@ -243,6 +246,17 @@ def save_to_history(file_bytes: bytes, filename: str) -> Optional[str]:
         print(f"Failed to save history: {e}")
         return None
 
+def _extract_gdrive_file_id(url: str) -> str:
+    """Extract Google Drive file ID from a sharing URL."""
+    if '/file/d/' in url:
+        return url.split('/file/d/')[1].split('/')[0].split('?')[0]
+    if 'open?id=' in url:
+        return url.split('open?id=')[-1].split('&')[0]
+    if 'id=' in url:
+        return url.split('id=')[-1].split('&')[0]
+    return ''
+
+
 def normalize_cloud_url(url: str) -> str:
     """Convert cloud share URL variants into direct-download URLs."""
     if not url:
@@ -252,43 +266,94 @@ def normalize_cloud_url(url: str) -> str:
 
     # Google Drive link variants
     if 'drive.google.com' in url:
-        if '/file/d/' in url:
-            # https://drive.google.com/file/d/FILEID/view?usp=sharing -> direct
-            file_id = url.split('/file/d/')[1].split('/')[0]
+        file_id = _extract_gdrive_file_id(url)
+        if file_id:
             return f'https://drive.google.com/uc?export=download&id={file_id}'
-        if 'open?id=' in url:
-            file_id = url.split('open?id=')[-1].split('&')[0]
-            return f'https://drive.google.com/uc?export=download&id={file_id}'
-        if 'uc?export=download&id=' in url:
-            # Already direct
-            return url
 
     # Dropbox link variants
     if 'dropbox.com' in url:
-        # If not already ?dl=1, convert
-        if '?dl=1' in url or '&dl=1' in url:
+        # Prefer raw=1 for direct access to file content stream
+        if '?raw=1' in url or '&raw=1' in url:
             return url
-        if '?dl=0' in url:
-            return url.replace('?dl=0', '?dl=1')
-        if '&dl=0' in url:
-            return url.replace('&dl=0', '&dl=1')
-        # Standard share URL with no query
         if '?' in url:
-            return f"{url}&dl=1"
-        return f"{url}?dl=1"
+            # Replace existing dl=0/1 or append raw=1
+            new_url = url.replace('dl=0', 'raw=1').replace('dl=1', 'raw=1')
+            if 'raw=1' not in new_url:
+                new_url += '&raw=1'
+            return new_url
+        return f"{url}?raw=1"
 
     return url
+
+
+def _fetch_with_requests(clean_url: str, is_gdrive: bool) -> bytes:
+    """Use the requests library to download, handling GDrive confirmation pages."""
+    session = _requests.Session()
+    headers = {'User-Agent': 'Mozilla/5.0'}
+    response = session.get(clean_url, headers=headers, timeout=60, stream=True)
+    response.raise_for_status()
+
+    content_type = response.headers.get('Content-Type', '')
+
+    # Google Drive may return an HTML confirmation page for large files
+    if is_gdrive and 'text/html' in content_type:
+        # Try to extract the confirm token from cookies or response body
+        confirm_token = None
+        for key, value in response.cookies.items():
+            if key.startswith('download_warning'):
+                confirm_token = value
+                break
+
+        if not confirm_token:
+            # Parse the confirm token from the HTML body
+            text = response.text
+            import re
+            match = re.search(r'confirm=([0-9A-Za-z_\-]+)', text)
+            if match:
+                confirm_token = match.group(1)
+
+        if confirm_token:
+            confirm_url = f"{clean_url}&confirm={confirm_token}"
+            response = session.get(confirm_url, headers=headers, timeout=60, stream=True)
+            response.raise_for_status()
+        else:
+            # Newer GDrive anti-scraping: try the export download with UUID
+            # Attempt without confirm (sometimes works for smaller files)
+            pass
+
+    return response.content
+
+
+def _fetch_with_urllib(clean_url: str) -> bytes:
+    """Fallback download using urllib."""
+    import urllib.request
+    req = urllib.request.Request(clean_url, headers={'User-Agent': 'Mozilla/5.0'})
+    with urllib.request.urlopen(req, timeout=45) as response:
+        return response.read()
 
 
 def fetch_cloud_file(url: str, filename: str) -> UploadFile:
     """Download a file from a URL and return a FastAPI UploadFile object."""
     try:
         clean_url = normalize_cloud_url(url)
-        req = urllib.request.Request(clean_url, headers={'User-Agent': 'Mozilla/5.0'})
-        with urllib.request.urlopen(req, timeout=45) as response:
-            file_bytes = response.read()
+        is_gdrive = 'drive.google.com' in url
+
+        if _requests is not None:
+            file_bytes = _fetch_with_requests(clean_url, is_gdrive)
+        else:
+            file_bytes = _fetch_with_urllib(clean_url)
+
+        # If Google Drive returned an HTML page despite our best efforts, fail clearly
+        if is_gdrive and file_bytes.lstrip().startswith(b'<!DOCTYPE') or file_bytes.lstrip().startswith(b'<html'):
+            raise ValueError(
+                "Google Drive returned an HTML page instead of the file. "
+                "Please make sure the file is shared as 'Anyone with the link can view' "
+                "and try again."
+            )
 
         file_obj = io.BytesIO(file_bytes)
         return UploadFile(filename=filename, file=file_obj)
+    except ValueError:
+        raise
     except Exception as e:
         raise ValueError(f"Failed to download cloud file: {str(e)}")

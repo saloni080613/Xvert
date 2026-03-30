@@ -107,14 +107,7 @@ const RemoteFetch = ({
                 />
             </div>
 
-            <div style={{ fontSize: '0.8rem', color: 'var(--ag-text-secondary, #666)', marginTop: isFlat ? '0.6rem' : '0.8rem', opacity: 0.8 }}>
-                <strong>Tip:</strong> Press Enter to select. Any public Google Drive or Dropbox link works.
-                {allowedSourceFormats && (
-                    <div style={{ marginTop: '0.3rem' }}>
-                        Accepted: <strong style={{color: 'var(--ag-accent)'}}>{allowedSourceFormats.map(f => f.toUpperCase()).join(', ')}</strong>
-                    </div>
-                )}
-            </div>
+
         </motion.div>
     );
 };

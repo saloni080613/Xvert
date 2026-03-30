@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Dropbox Authentication</title>
+</head>
+<body>
+    <script>
+        // Extract token from hash
+        const hash = window.location.hash.substring(1);
+        const params = new URLSearchParams(hash);
+        const token = params.get('access_token');
+        
+        console.log("Dropbox Callback Hash:", hash);
+
+        if (token) {
+            const authData = {
+                source: 'dropbox-auth-success',
+                token: token,
+                uid: params.get('uid'),
+                accountId: params.get('account_id'),
+                timestamp: Date.now() // Ensure the storage event fires every time
+            };
+
+            // Method 1: postMessage (Direct communication)
+            try {
+                if (window.opener) {
+                    window.opener.postMessage(authData, window.location.origin);
+                    console.log("Sent postMessage to opener");
+                }
+            } catch (e) {
+                console.error("postMessage error:", e);
+            }
+
+            // Method 2: localStorage (Reliable fallback for same-origin)
+            try {
+                localStorage.setItem('dropbox_auth_result', JSON.stringify(authData));
+                console.log("Saved to localStorage");
+            } catch (e) {
+                console.error("localStorage error:", e);
+            }
+
+            // Close the window after a tiny delay to ensure storage/message triggers
+            setTimeout(() => {
+                window.close();
+            }, 500);
+        } else {
+            console.error("No token found in hash:", hash);
+            document.body.innerHTML += "<p style='color:red'>Error: No authentication token found. Please check your Dropbox app configuration.</p>";
+        }
+    </script>
+    <div style="font-family: sans-serif; text-align: center; padding-top: 50px;">
+        <h2>Authenticating...</h2>
+        <p>Sending information back to Xvert.</p>
+        <p style="font-size: 0.9rem; color: #666;">This window should close automatically.</p>
+    </div>
+</body>
+</html>

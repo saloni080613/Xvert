@@ -156,6 +156,13 @@ async def convert_image_endpoint(
                 detail=f"Invalid source format '{source_format}'. Allowed: {', '.join(SUPPORTED_FORMATS)}"
             )
 
+    # Ensure file or cloud_url is provided
+    if not file and not cloud_url:
+        raise HTTPException(status_code=400, detail="Must provide either file or cloud_url")
+        
+    if cloud_url:
+        file = fetch_cloud_file(cloud_url, filename or "cloud_image")
+
     # Auto-detect source format from filename if not provided
     if not source_format:
         source_format = get_format_from_filename(file.filename or "")
@@ -164,12 +171,6 @@ async def convert_image_endpoint(
                 status_code=400,
                 detail="Could not detect source format. Please provide source_format parameter."
             )
-    # Ensure file or cloud_url is provided
-    if not file and not cloud_url:
-        raise HTTPException(status_code=400, detail="Must provide either file or cloud_url")
-        
-    if cloud_url:
-        file = fetch_cloud_file(cloud_url, filename or "cloud_image")
 
     # Read file contents
     try:
@@ -540,11 +541,16 @@ async def remote_fetch_convert(
 
     try:
         # Fetch the file from URL
-        filename = url.split('/')[-1] or "remote_file"
-        if '?' in filename:
-            filename = filename.split('?')[0]
-        if not filename or '.' not in filename:
+        # For Google Drive URLs, the last path segment is "view" (not a real filename),
+        # so we must rely on content-based format detection after downloading.
+        if 'drive.google.com' in url:
             filename = "remote_file"
+        else:
+            filename = url.split('/')[-1] or "remote_file"
+            if '?' in filename:
+                filename = filename.split('?')[0]
+            if not filename or '.' not in filename:
+                filename = "remote_file"
 
         file = fetch_cloud_file(url, filename)
 

@@ -31,14 +31,19 @@ async def convert_document(file_content: bytes, filename: str, source_format: st
     temp_dir = _TEMP_DIR
     
     # Input file
-    suffix = f".{source_format}"
-    # Use a safer way to create the temp input file to avoid issues with some converters needing real extensions
-    input_path = os.path.join(temp_dir, f"xvert_in_{os.path.basename(filename)}")
+    # Ensure filename has the correct extension for the converter libraries to detect the type
+    import uuid
+    request_id = str(uuid.uuid4())[:8]
+    base = os.path.basename(filename)
+    if not base.endswith(f".{source_format}"):
+        base = f"{base}.{source_format}"
+    
+    input_path = os.path.join(temp_dir, f"xvert_{request_id}_in_{base}")
     with open(input_path, "wb") as f:
         f.write(file_content)
 
     # Output file
-    output_path = os.path.join(temp_dir, f"converted_{os.path.basename(input_path)}.{target_format}")
+    output_path = os.path.join(temp_dir, f"xvert_{request_id}_out_{os.path.basename(input_path)}.{target_format}")
 
     def run_conversion():
         try:
