@@ -27,6 +27,7 @@ from app.services.image_converter import (
     get_mime_type,
     validate_format,
     SUPPORTED_FORMATS,
+    scrub_image_metadata,
 )
 from app.services.data_converter import (
     convert_data,
@@ -119,6 +120,16 @@ async def convert_image_endpoint(
         default=None,
         description="Source format (auto-detected if not provided)"
     ),
+    #exif data srubbing for privacy mode NEW
+
+    privacy_mode: bool = Form(
+        default=False, 
+        description="Enable Privacy Mode to strip sensitive EXIF metadata"
+    ),
+
+    width: Optional[int] = Form(default=None, description="Target width in pixels (auto-scales height if blank)"),
+    height: Optional[int] = Form(default=None, description="Target height in pixels (auto-scales width if blank)"),
+    quality: int = Form(default=95, ge=1, le=100, description="Compression quality (1-100, affects JPEGs)"),
 ):
     """
     Convert an image to a different format.
@@ -178,7 +189,14 @@ async def convert_image_endpoint(
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Failed to read file: {str(e)}")
 
-    # Validate file size
+    # --- 🛡️ PRIVACY MODE INTERCEPT --- meta data scrubber NEW
+    if privacy_mode:
+        try:
+            file_bytes = scrub_image_metadata(file_bytes)
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Failed to scrub EXIF data: {str(e)}")
+
+    # Validate file size (Done AFTER scrub in case scrubbing reduced size)
     if not validate_file_size(len(file_bytes), settings.MAX_FILE_SIZE):
         max_mb = settings.MAX_FILE_SIZE / (1024 * 1024)
         raise HTTPException(
@@ -187,12 +205,16 @@ async def convert_image_endpoint(
         )
 
     # Check if source and target are the same
-    if source_format == target_format or (source_format == "jpeg" and target_format == "jpg") or (source_format == "jpg" and target_format == "jpeg"):
+    is_same_format = source_format == target_format or (source_format == "jpeg" and target_format == "jpg") or (source_format == "jpg" and target_format == "jpeg")
+    
+    # Check if the user is actually asking the API to do work (tweaking)
+    is_tweaking = privacy_mode or (width is not None) or (height is not None) or (quality != 95)
+    
+    if is_same_format and not is_tweaking:
         raise HTTPException(
             status_code=400,
-            detail=f"Source and target formats are the same ({source_format}). No conversion needed."
+            detail=f"Source and target formats are the same ({source_format}). No conversion needed unless you are applying privacy mode, resizing, or compressing."
         )
-
     # --- Supabase: create pending record + upload original ---
     conversion_id = None
     if user_id:
@@ -217,6 +239,9 @@ async def convert_image_endpoint(
             file_bytes=file_bytes,
             source_format=source_format,
             target_format=target_format,
+            width=width,     # <-- ADD THIS
+            height=height,   # <-- ADD THIS
+            quality=quality  # <-- ADD THIS
         )
     except ValueError as e:
         if conversion_id:

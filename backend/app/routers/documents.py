@@ -33,7 +33,9 @@ async def convert_document_endpoint(
     target_format: str = Form(...),
     file: Optional[UploadFile] = File(None),
     cloud_url: Optional[str] = Form(None),
-    filename: Optional[str] = Form(None)
+    filename: Optional[str] = Form(None),
+    page_range: Optional[str] = Form(None, description="Pages to extract (e.g., '1-3' or '2,4')"),
+    compress: bool = Form(False, description="Apply heavy compression to output PDF")
 ):
     user_id = await get_optional_user(request)
 
@@ -66,7 +68,14 @@ async def convert_document_endpoint(
 
     try:
         # Use content-based conversion (absolute paths handled in document_converter)
-        file_path = await convert_document(file_bytes, file.filename or "document", source_format, target_format)
+        file_path = await convert_document(
+            file_content=file_bytes, 
+            filename=file.filename or "document", 
+            source_format=source_format, 
+            target_format=target_format,
+            page_range=page_range,  # <-- ADD THIS
+            compress=compress       # <-- ADD THIS
+        )
 
         # Read converted file for storage + history
         with open(file_path, "rb") as f:

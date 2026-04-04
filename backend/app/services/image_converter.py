@@ -75,9 +75,12 @@ def convert_image(
     file_bytes: bytes,
     source_format: Optional[str],
     target_format: str,
+    width: Optional[int] = None,
+    height: Optional[int] = None,
     quality: int = 95
 ) -> Tuple[bytes, str]:
     """
+    
     Convert an image from one format to another.
     
     Args:
@@ -96,21 +99,18 @@ def convert_image(
         3. Converting color modes as needed (RGBA→RGB for JPEG)
         4. Handling transparency by compositing onto a background
         5. Saving to the target format with appropriate settings
+    
+    Convert an image from one format to another, with optional resizing and compression.
     """
-    # Normalize format to lowercase
     target_format = target_format.lower()
     if target_format not in SUPPORTED_FORMATS:
         raise ValueError(f"Unsupported target format: {target_format}. Supported: {SUPPORTED_FORMATS}")
     
-    # Load image from bytes
-    # PIL automatically detects the format from the file header (magic bytes)
     image = Image.open(BytesIO(file_bytes))
     
-    # Detect source format if not provided
     detected_format = image.format.lower() if image.format else None
     if source_format:
         source_format = source_format.lower()
-        # Normalize jpeg to jpg for consistency
         if source_format == "jpeg":
             source_format = "jpg"
     else:
@@ -118,23 +118,38 @@ def convert_image(
         if source_format == "jpeg":
             source_format = "jpg"
     
-    # Validate source format
     if source_format not in SUPPORTED_FORMATS:
         raise ValueError(f"Unsupported source format: {source_format}. Supported: {SUPPORTED_FORMATS}")
     
-    # Handle animated GIFs - extract first frame only
-    # GIFs store multiple frames, but static formats only support one
     if hasattr(image, 'n_frames') and image.n_frames > 1:
-        image.seek(0)  # Go to first frame
-    
-    # Prepare image for target format
+        image.seek(0)
+        
+    # --- NEW: ADVANCED RESIZING LOGIC ---
+    # We calculate proportional scaling if only width OR height is provided
+    if width or height:
+        orig_w, orig_h = image.size
+        
+        # If both are provided, force exactly those dimensions
+        if width and height:
+            new_w, new_h = width, height
+        # If only width is provided, scale height proportionally
+        elif width:
+            new_w = width
+            new_h = int(orig_h * (width / orig_w))
+        # If only height is provided, scale width proportionally
+        else:
+            new_h = height
+            new_w = int(orig_w * (height / orig_h))
+            
+        # Resize using LANCZOS for sharp, high-quality downsampling
+        image = image.resize((new_w, new_h), Image.Resampling.LANCZOS)
+    # -------------------------------------
+
     image = _prepare_for_target_format(image, target_format)
     
-    # Save to bytes
     output_buffer = BytesIO()
     save_kwargs = _get_save_options(target_format, quality)
     
-    # PIL uses 'JPEG' internally, not 'JPG'
     pil_format = "JPEG" if target_format in ("jpg", "jpeg") else target_format.upper()
     image.save(output_buffer, format=pil_format, **save_kwargs)
     
@@ -232,3 +247,25 @@ def get_mime_type(format: str) -> str:
 def validate_format(format: str) -> bool:
     """Check if a format is supported."""
     return format.lower() in SUPPORTED_FORMATS
+
+def scrub_image_metadata(file_bytes: bytes) -> bytes:
+    """
+    Reads an uploaded image, strips all sensitive EXIF metadata 
+    (like GPS location, dates, and camera details), and returns clean bytes.
+    """
+    # 1. Load the raw bytes into a PIL Image
+    image = Image.open(BytesIO(file_bytes))
+    
+    # 2. Capture the original format before wiping metadata
+    original_format = image.format if image.format else 'JPEG'
+    
+    # 3. Create a fresh buffer in memory
+    clean_buffer = BytesIO()
+    
+    # 4. Save the image to the new buffer. 
+    # By default, PIL's save() function drops all EXIF metadata 
+    # unless you explicitly force it to carry it over.
+    image.save(clean_buffer, format=original_format)
+    
+    # 5. Return the clean, scrubbed bytes
+    return clean_buffer.getvalue()

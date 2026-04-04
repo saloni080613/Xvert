@@ -29,6 +29,21 @@ class ImageConversionRequest(BaseModel):
         ...,  # Required field
         description="Target format to convert to (png, jpg, jpeg, gif)"
     )
+    # --- NEW ADVANCED TWEAK PARAMETERS ---
+    width: Optional[int] = Field(
+        default=None,
+        description="Target width in pixels. If only width is provided, height auto-scales."
+    )
+    height: Optional[int] = Field(
+        default=None,
+        description="Target height in pixels. If only height is provided, width auto-scales."
+    )
+    quality: int = Field(
+        default=95,
+        ge=1,
+        le=100,
+        description="Compression quality for JPEGs and WebP (1-100)"
+    )
 
 
 class ImageConversionResponse(BaseModel):

@@ -23,7 +23,15 @@ except ImportError:
 _TEMP_DIR = tempfile.gettempdir()
 
 
-async def convert_document(file_content: bytes, filename: str, source_format: str, target_format: str) -> str:
+async def convert_document(
+    file_content: bytes, 
+    filename: str, 
+    source_format: str, 
+    target_format: str,
+    # --- NEW PDF TWEAK PARAMETERS ---
+    page_range: str = None,
+    compress: bool = False
+) -> str:
     """
     Converts document bytes to target format and returns the ABSOLUTE path to the result.
     """
@@ -103,9 +111,76 @@ async def convert_document(file_content: bytes, filename: str, source_format: st
                 pix.save(output_path)
                 doc.close()
                 
+            elif source_format == "pdf" and target_format == "pdf":
+                import shutil
+                shutil.copy2(input_path, output_path)
+                
             else:
                 raise ValueError(f"Conversion from {source_format} to {target_format} not supported.")
+# --- NEW: PDF TWEAK ENGINE (SPLIT & COMPRESS) ---
+            if target_format == "pdf" and (page_range or compress):
                 
+                target_to_tweak = output_path
+                if source_format == "pdf":
+                    target_to_tweak = input_path
+
+                if os.path.exists(target_to_tweak):
+                    doc = fitz.open(target_to_tweak)
+                    new_doc = fitz.open() 
+                    
+                    try:
+                        # Clean up page range just in case Swagger sent spaces
+                        clean_range = page_range.strip() if page_range else ""
+                        
+                        # 1. Handle Page Splitting
+                        if clean_range:
+                            try:
+                                pages_to_keep = []
+                                parts = clean_range.split(',')
+                                for part in parts:
+                                    part = part.strip()
+                                    if not part: continue
+                                    if '-' in part:
+                                        start, end = map(int, part.split('-'))
+                                        # Convert 1-based index to 0-based index
+                                        pages_to_keep.extend(range(start - 1, end))
+                                    else:
+                                        pages_to_keep.append(int(part) - 1)
+                                
+                                # Ensure we don't request a page that doesn't exist
+                                total_pages = doc.page_count
+                                pages_to_keep = [p for p in pages_to_keep if 0 <= p < total_pages]
+                                
+                                # Insert specific pages
+                                for p in pages_to_keep:
+                                    new_doc.insert_pdf(doc, from_page=p, to_page=p)
+                                    
+                            except ValueError:
+                                raise Exception("Invalid page_range format. Use formats like '1-3' or '1,3,5'")
+                        else:
+                            # If no range specified, just copy all pages
+                            new_doc.insert_pdf(doc)
+
+                        # 2. Handle Compression & Save
+                        save_options = {
+                            "garbage": 4,          # Remove unused objects
+                            "deflate": True,       # Compress streams
+                        }
+                        if compress:
+                            # Heavy compression options
+                            save_options["clean"] = True
+                            
+                            save_options["deflate_images"] = True
+                            save_options["deflate_fonts"] = True
+
+                        # Overwrite the output path with our new customized PDF
+                        new_doc.save(output_path, **save_options)
+                        
+                    finally:
+                        # CRITICAL FIX: Always close handles so Windows can delete the temp files!
+                        new_doc.close()
+                        doc.close()
+            # ------------------------------------------------
             # Final check: did we actually create the file?
             if not os.path.exists(output_path) or os.path.getsize(output_path) == 0:
                 raise Exception(f"Conversion failed: Output file missing or empty at {output_path}")
