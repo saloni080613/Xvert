@@ -58,9 +58,11 @@ class ConversionService {
      * Convert an image file.
      * @param {File} file - The file to convert.
      * @param {string} targetFormat - The target format (png, jpg, gif).
+     * @param {string} cloudUrl - Optional cloud URL.
+     * @param {Object} options - Optional image tweaks (privacyMode, width, height, quality).
      * @returns {Promise<Blob>} - The converted file blob.
      */
-    async convertImage(file, targetFormat, cloudUrl = null) {
+    async convertImage(file, targetFormat, cloudUrl = null, options = {}) {
         const fd = new FormData();
         fd.append('target_format', targetFormat);
         if (cloudUrl) {
@@ -71,6 +73,13 @@ class ConversionService {
         } else {
             throw new Error('convertImage: file or cloudUrl required');
         }
+
+        // Add optional tweaks
+        if (options.privacyMode) fd.append('privacy_mode', true);
+        if (options.width) fd.append('width', options.width);
+        if (options.height) fd.append('height', options.height);
+        if (options.quality) fd.append('quality', options.quality);
+
         return this._postFormBlob('/api/convert/image', fd);
     }
 
@@ -99,9 +108,11 @@ class ConversionService {
      * @param {File} file - The file to convert.
      * @param {string} sourceFormat - The source format.
      * @param {string} targetFormat - The target format.
+     * @param {string} cloudUrl - Optional cloud URL.
+     * @param {Object} options - Optional document tweaks (pageRange, compress).
      * @returns {Promise<Blob>} - The converted file blob.
      */
-    async convertDocument(file, sourceFormat, targetFormat, cloudUrl = null) {
+    async convertDocument(file, sourceFormat, targetFormat, cloudUrl = null, options = {}) {
         const fd = new FormData();
         fd.append('source_format', sourceFormat);
         fd.append('target_format', targetFormat);
@@ -113,6 +124,11 @@ class ConversionService {
         } else {
             throw new Error('convertDocument: file or cloudUrl required');
         }
+
+        // Add optional tweaks
+        if (options.pageRange) fd.append('page_range', options.pageRange);
+        if (options.compress) fd.append('compress', true);
+
         return this._postFormBlob('/api/convert/document', fd);
     }
 
@@ -136,14 +152,24 @@ class ConversionService {
      * Convert a file from a remote URL.
      * @param {string} url - The URL of the file to fetch and convert.
      * @param {string} targetFormat - The target format.
+     * @param {Object} options - Optional tweaks.
      * @returns {Promise<Blob>} - The converted file blob.
      */
-    async remoteConvert(url, targetFormat) {
+    async remoteConvert(url, targetFormat, options = {}) {
         const fd = new FormData();
         fd.append('url', url);
         if (targetFormat) {
             fd.append('target_format', targetFormat);
         }
+
+        // Add optional tweaks (Backend supports them for images and documented routes)
+        if (options.privacyMode) fd.append('privacy_mode', true);
+        if (options.width) fd.append('width', options.width);
+        if (options.height) fd.append('height', options.height);
+        if (options.quality) fd.append('quality', options.quality);
+        if (options.pageRange) fd.append('page_range', options.pageRange);
+        if (options.compress) fd.append('compress', true);
+
         return this._postFormBlob('/api/convert/remote-fetch', fd);
     }
 }

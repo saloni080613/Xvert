@@ -366,6 +366,19 @@ export default function Home() {
     const [isProcessing, setIsProcessing] = useState(false)
     const [processingProgress, setProcessingProgress] = useState(0)
 
+    // Advanced Settings States
+    const [showAdvanced, setShowAdvanced] = useState(false)
+    const [privacyMode, setPrivacyMode] = useState(false)
+    const [targetWidth, setTargetWidth] = useState('')
+    const [targetHeight, setTargetHeight] = useState('')
+    const [quality, setQuality] = useState(95)
+    const [compressPdf, setCompressPdf] = useState(false)
+    const [pageRange, setPageRange] = useState('')
+
+    const isTweaking = useMemo(() => {
+        return privacyMode || targetWidth !== '' || targetHeight !== '' || quality !== 95 || compressPdf || pageRange !== ''
+    }, [privacyMode, targetWidth, targetHeight, quality, compressPdf, pageRange])
+
     const isConverting = ['uploading', 'processing'].includes(batchStatus) || isProcessing
     const isDone = batchStatus === 'done' || (resultBlob && !isProcessing && !['uploading', 'processing'].includes(batchStatus))
     const fileStatesValues = Object.values(fileStates)
@@ -376,8 +389,17 @@ export default function Home() {
             : (fileStatesValues.length > 0
                 ? Math.round(fileStatesValues.reduce((s, f) => s + (f.progress ?? 0), 0) / fileStatesValues.length)
                 : 0))
+
+    const isSameFormat = useMemo(() => {
+        if (!selectedTool || !file) return false
+        const sourceExt = file.name?.split('.').pop()?.toLowerCase() || ''
+        const targetExt = selectedTool.target?.toLowerCase() || ''
+        return sourceExt === targetExt || (sourceExt === 'jpg' && targetExt === 'jpeg') || (sourceExt === 'jpeg' && targetExt === 'jpg')
+    }, [selectedTool, file])
+
     const canConvert = (pendingFiles.length > 0 || (remoteUrl && remoteUrl.trim() !== '')) &&
-        (selectedTool?.id !== 'merge-pdf' || (pendingFiles.length >= 2 || (remoteUrl && remoteUrl.trim() !== '' && pendingFiles.length >= 1)))
+        (selectedTool?.id !== 'merge-pdf' || (pendingFiles.length >= 2 || (remoteUrl && remoteUrl.trim() !== '' && pendingFiles.length >= 1))) &&
+        (!isSameFormat || isTweaking)
     // UX enhancement states
     const [searchQuery, setSearchQuery] = useState('')
     const [activeCategory, setActiveCategory] = useState('all')
@@ -565,8 +587,16 @@ export default function Home() {
         setResultBlob(null)
         setExtractedText(null)
         setOcrDone(false)
-        setIsOcrConverting(false)
+        setIsOcrConverting?.(false)
         setMascotState('idle')
+        // Reset advanced settings
+        setShowAdvanced(false)
+        setPrivacyMode(false)
+        setTargetWidth('')
+        setTargetHeight('')
+        setQuality(95)
+        setCompressPdf(false)
+        setPageRange('')
     }
 
     const handleBackToGrid = () => {
@@ -578,8 +608,16 @@ export default function Home() {
         setResultBlob(null)
         setExtractedText(null)
         setOcrDone(false)
-        setIsOcrConverting(false)
+        setIsOcrConverting?.(false)
         setMascotState('idle')
+        // Reset advanced settings
+        setShowAdvanced(false)
+        setPrivacyMode(false)
+        setTargetWidth('')
+        setTargetHeight('')
+        setQuality(95)
+        setCompressPdf(false)
+        setPageRange('')
     }
 
     // Save to recent conversions
@@ -619,38 +657,45 @@ export default function Home() {
 
         try {
             let resultBlob
-            const trimmedUrl = remoteUrl?.trim();
+            const trimmedUrl = remoteUrl?.trim()
             console.log("trimmedUrl:", trimmedUrl)
+
+            const options = {
+                privacyMode,
+                width: targetWidth ? parseInt(targetWidth) : null,
+                height: targetHeight ? parseInt(targetHeight) : null,
+                quality: parseInt(quality),
+                compress: compressPdf,
+                pageRange: pageRange?.trim() || null
+            }
 
             if (trimmedUrl) {
                 console.log("Calling remoteConvert for:", trimmedUrl, "target:", selectedTool?.target)
-                resultBlob = await conversionService.remoteConvert(trimmedUrl, selectedTool?.target)
+                resultBlob = await conversionService.remoteConvert(trimmedUrl, selectedTool?.target, options)
                 console.log("remoteConvert returned:", resultBlob)
             } else if (file && (file.isRemote || file.isCloudUrl)) {
-                // If it's a specific tool like PDF to Word, use the specific endpoint if possible, 
-                // otherwise fallback to remote-fetch
                 const cUrl = file.url
                 if (selectedTool.type === 'pdf' && selectedTool.id !== 'merge-pdf') {
-                    resultBlob = await conversionService.convertDocument(null, 'pdf', selectedTool.target, cUrl)
+                    resultBlob = await conversionService.convertDocument(null, 'pdf', selectedTool.target, cUrl, options)
                 } else if (selectedTool.type === 'image') {
-                    resultBlob = await conversionService.convertImage(null, selectedTool.target, cUrl)
+                    resultBlob = await conversionService.convertImage(null, selectedTool.target, cUrl, options)
                 } else if (selectedTool.type === 'docx') {
-                    resultBlob = await conversionService.convertDocument(null, 'docx', 'pdf', cUrl)
+                    resultBlob = await conversionService.convertDocument(null, 'docx', 'pdf', cUrl, options)
                 } else if (selectedTool.type === 'data') {
                     resultBlob = await conversionService.convertData(null, selectedTool.target, cUrl)
                 } else {
-                    resultBlob = await conversionService.remoteConvert(cUrl, selectedTool.target)
+                    resultBlob = await conversionService.remoteConvert(cUrl, selectedTool.target, options)
                 }
             } else if (selectedTool.id === 'merge-pdf') {
                 resultBlob = await conversionService.mergeDocuments(files)
             } else if (selectedTool.id === 'image-to-pdf') {
-                resultBlob = await conversionService.convertDocument(file, 'image', 'pdf')
+                resultBlob = await conversionService.convertDocument(file, 'image', 'pdf', null, options)
             } else if (selectedTool.type === 'pdf') {
-                resultBlob = await conversionService.convertDocument(file, 'pdf', selectedTool.target)
+                resultBlob = await conversionService.convertDocument(file, 'pdf', selectedTool.target, null, options)
             } else if (selectedTool.type === 'image' || selectedTool.type === 'jpg' || selectedTool.type === 'png' || selectedTool.type === 'gif') {
-                resultBlob = await conversionService.convertImage(file, selectedTool.target)
+                resultBlob = await conversionService.convertImage(file, selectedTool.target, null, options)
             } else if (selectedTool.type === 'docx') {
-                resultBlob = await conversionService.convertDocument(file, 'docx', 'pdf')
+                resultBlob = await conversionService.convertDocument(file, 'docx', 'pdf', null, options)
             } else if (selectedTool.type === 'data') {
                 resultBlob = await conversionService.convertData(file, selectedTool.target)
             } else {
@@ -1434,6 +1479,132 @@ export default function Home() {
                                             </div>
                                         )}
                                     </motion.div>
+                                )}
+
+                                {/* Advanced Settings Toggle — only for image and PDF tools, not merge-pdf */}
+                                {!isConverting && !isDone && (pendingFiles.length > 0 || (remoteUrl && remoteUrl.trim() !== '')) &&
+                                 selectedTool?.id !== 'merge-pdf' &&
+                                 (selectedTool?.type === 'pdf' || selectedTool?.type === 'image' || selectedTool?.type === 'jpg' || selectedTool?.type === 'png' || selectedTool?.type === 'gif') && (
+                                    <div style={{ margin: '0.5rem 0 1.5rem' }}>
+                                        <motion.button
+                                            onClick={() => setShowAdvanced(!showAdvanced)}
+                                            style={{
+                                                background: 'transparent',
+                                                border: 'none',
+                                                color: 'var(--ag-accent)',
+                                                fontSize: '0.85rem',
+                                                fontWeight: 600,
+                                                cursor: 'pointer',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: '0.4rem',
+                                                margin: '0 auto',
+                                                padding: '0.5rem 1rem',
+                                                borderRadius: '8px',
+                                            }}
+                                            whileHover={{ background: 'rgba(var(--ag-accent-rgb), 0.1)' }}
+                                        >
+                                            <motion.span
+                                                animate={{ rotate: showAdvanced ? 180 : 0 }}
+                                                transition={{ duration: 0.3 }}
+                                                style={{ display: 'inline-block' }}
+                                            >
+                                                ⚙️
+                                            </motion.span>
+                                            {showAdvanced ? 'Hide Advanced Settings' : 'Advanced Settings'}
+                                        </motion.button>
+
+                                        <AnimatePresence>
+                                            {showAdvanced && (
+                                                <motion.div
+                                                    initial={{ height: 0, opacity: 0 }}
+                                                    animate={{ height: 'auto', opacity: 1 }}
+                                                    exit={{ height: 0, opacity: 0 }}
+                                                    transition={springGentle}
+                                                    style={{ overflow: 'hidden' }}
+                                                >
+                                                    <div style={{
+                                                        padding: '1.5rem',
+                                                        marginTop: '1rem',
+                                                        borderRadius: '12px',
+                                                        background: 'rgba(255, 255, 255, 0.03)',
+                                                        border: '1px solid var(--ag-glass-border)',
+                                                        textAlign: 'left',
+                                                        display: 'flex',
+                                                        flexDirection: 'column',
+                                                        gap: '1.2rem'
+                                                    }}>
+                                                        
+                                                        {/* Image Specific Settings */}
+                                                        {(selectedTool.type === 'image' || selectedTool.type === 'jpg' || selectedTool.type === 'png' || selectedTool.type === 'gif') && (
+                                                            <>
+                                                                <label
+                                                                    onClick={() => setPrivacyMode(!privacyMode)}
+                                                                    style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer', fontSize: '0.9rem', color: 'var(--ag-text)', userSelect: 'none' }}
+                                                                >
+                                                                    {/* Custom checkbox matching input box style */}
+                                                                    <div style={{
+                                                                        width: '18px',
+                                                                        height: '18px',
+                                                                        borderRadius: '5px',
+                                                                        border: '1px solid var(--ag-glass-border)',
+                                                                        background: privacyMode ? 'var(--ag-accent)' : 'var(--ag-input-bg)',
+                                                                        flexShrink: 0,
+                                                                        display: 'flex',
+                                                                        alignItems: 'center',
+                                                                        justifyContent: 'center',
+                                                                        transition: 'background 0.2s ease',
+                                                                    }}>
+                                                                        {privacyMode && (
+                                                                            <svg width="11" height="9" viewBox="0 0 11 9" fill="none">
+                                                                                <path d="M1 4L4 7.5L10 1" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                                                                            </svg>
+                                                                        )}
+                                                                    </div>
+                                                                    Scrub Privacy Data (EXIF)
+                                                                </label>
+                                                                
+                                                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                                                                    <div>
+                                                                        <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--ag-text-secondary)', marginBottom: '0.4rem' }}>Target Width (px)</label>
+                                                                        <input type="number" placeholder="Original" value={targetWidth} onChange={(e) => setTargetWidth(e.target.value)} style={{ width: '100%', padding: '0.6rem', borderRadius: '8px', background: 'var(--ag-input-bg)', border: '1px solid var(--ag-glass-border)', color: 'var(--ag-text)', fontSize: '0.9rem' }} />
+                                                                    </div>
+                                                                    <div>
+                                                                        <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--ag-text-secondary)', marginBottom: '0.4rem' }}>Target Height (px)</label>
+                                                                        <input type="number" placeholder="Original" value={targetHeight} onChange={(e) => setTargetHeight(e.target.value)} style={{ width: '100%', padding: '0.6rem', borderRadius: '8px', background: 'var(--ag-input-bg)', border: '1px solid var(--ag-glass-border)', color: 'var(--ag-text)', fontSize: '0.9rem' }} />
+                                                                    </div>
+                                                                </div>
+
+                                                                <div>
+                                                                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.4rem' }}>
+                                                                        <label style={{ fontSize: '0.8rem', color: 'var(--ag-text-secondary)' }}>Compression Quality</label>
+                                                                        <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--ag-accent)' }}>{quality}%</span>
+                                                                    </div>
+                                                                    <input type="range" min="1" max="100" value={quality} onChange={(e) => setQuality(e.target.value)} style={{ width: '100%', accentColor: 'var(--ag-accent)', cursor: 'pointer' }} />
+                                                                </div>
+                                                            </>
+                                                        )}
+
+                                                        {/* PDF Specific Settings */}
+                                                        {selectedTool.type === 'pdf' && (
+                                                            <>
+                                                                <label style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer', fontSize: '0.9rem', color: 'var(--ag-text)' }}>
+                                                                    <input type="checkbox" checked={compressPdf} onChange={(e) => setCompressPdf(e.target.checked)} style={{ width: '18px', height: '18px', accentColor: 'var(--ag-accent)' }} />
+                                                                    Compress PDF File Size
+                                                                </label>
+                                                                
+                                                                <div>
+                                                                    <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--ag-text-secondary)', marginBottom: '0.4rem' }}>Specific Pages</label>
+                                                                    <input type="text" placeholder="e.g. 1-5, 8" value={pageRange} onChange={(e) => setPageRange(e.target.value)} style={{ width: '100%', padding: '0.6rem', borderRadius: '8px', background: 'var(--ag-input-bg)', border: '1px solid var(--ag-glass-border)', color: 'var(--ag-text)', fontSize: '0.9rem' }} />
+                                                                    <p style={{ fontSize: '0.7rem', color: 'var(--ag-text-secondary)', marginTop: '0.3rem' }}>Leave blank to include all pages</p>
+                                                                </div>
+                                                            </>
+                                                        )}
+                                                    </div>
+                                                </motion.div>
+                                            )}
+                                        </AnimatePresence>
+                                    </div>
                                 )}
 
 

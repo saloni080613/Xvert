@@ -1,4 +1,4 @@
-import { Sun, Moon } from 'lucide-react'
+import { Sun, Moon, Palette } from 'lucide-react'
 import { useTheme } from './ThemeContext'
 
 export default function DarkModeToggle() {
@@ -113,15 +113,11 @@ export default function DarkModeToggle() {
                     transition: 'all 0.3s'
                 }}
             >
-                <div 
+                <Palette
+                    size={16}
                     style={{
-                        width: '14px',
-                        height: '14px',
-                        borderRadius: '50%',
-                        background: '#c8a880',
-                        opacity: isWarm ? 1 : 0.6,
-                        boxShadow: isWarm ? '0 0 6px rgba(255,255,255,0.5)' : 'none',
-                        transition: 'all 0.3s'
+                        color: isWarm ? '#fff' : 'var(--ag-text-secondary)',
+                        transition: 'color 0.3s'
                     }}
                 />
             </div>

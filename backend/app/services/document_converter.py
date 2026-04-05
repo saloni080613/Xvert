@@ -55,6 +55,45 @@ async def convert_document(
 
     def run_conversion():
         try:
+            nonlocal input_path  # Allow reassignment if we pre-slice the PDF
+
+            # --- PRE-CONVERSION: Extract specific pages from PDF before converting ---
+            # This runs FIRST so any converter (PDF→DOCX, PDF→Image, etc.) only sees
+            # the requested pages, not the entire document.
+            if source_format == "pdf" and page_range and page_range.strip():
+                import uuid as _uuid
+                sliced_path = os.path.join(temp_dir, f"xvert_{request_id}_sliced_{_uuid.uuid4().hex[:6]}.pdf")
+                try:
+                    src_doc = fitz.open(input_path)
+                    sliced_doc = fitz.open()
+                    total_pages = src_doc.page_count
+                    pages_to_keep = []
+                    for part in page_range.strip().split(','):
+                        part = part.strip()
+                        if not part:
+                            continue
+                        if '-' in part:
+                            start, end = map(int, part.split('-'))
+                            pages_to_keep.extend(range(start - 1, end))
+                        else:
+                            pages_to_keep.append(int(part) - 1)
+                    # Clamp to valid page indices
+                    pages_to_keep = [p for p in pages_to_keep if 0 <= p < total_pages]
+                    if not pages_to_keep:
+                        raise ValueError(f"Page range '{page_range}' resulted in no valid pages (document has {total_pages} pages).")
+                    for p in pages_to_keep:
+                        sliced_doc.insert_pdf(src_doc, from_page=p, to_page=p)
+                    sliced_doc.save(sliced_path, garbage=4, deflate=True)
+                    sliced_doc.close()
+                    src_doc.close()
+                    # Replace input so all converters below use the sliced PDF
+                    input_path = sliced_path
+                except ValueError:
+                    raise
+                except Exception as e:
+                    raise Exception(f"Failed to extract pages: {e}")
+            # -----------------------------------------------------------------------
+
             # --- PDF to Word ---
             if source_format == "pdf" and target_format == "docx":
                 cv = Converter(input_path)
