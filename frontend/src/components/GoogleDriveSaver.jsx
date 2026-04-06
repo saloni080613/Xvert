@@ -132,9 +132,9 @@ const GoogleDriveSaver = ({ downloadUrl, filename, minimal = false }) => {
             whileTap={!isSaving ? { scale: 0.95 } : {}}
             transition={{ type: "spring", stiffness: 400, damping: 10 }}
             style={{ 
-                background: 'rgba(124, 77, 255, 0.15)',
-                color: '#7c4dff',
-                border: '1px solid rgba(124, 77, 255, 0.25)',
+                background: 'var(--ag-btn-secondary)',
+                color: 'var(--ag-btn-secondary-text)',
+                border: '1px solid var(--ag-glass-border)',
                 backdropFilter: 'blur(10px)',
                 padding: '0.8rem 1.6rem',
                 borderRadius: '50px',
@@ -147,7 +147,7 @@ const GoogleDriveSaver = ({ downloadUrl, filename, minimal = false }) => {
                 fontSize: '0.95rem',
                 minWidth: '200px',
                 opacity: isSaving ? 0.7 : 1,
-                boxShadow: '0 4px 15px rgba(124, 77, 255, 0.08)'
+                boxShadow: '0 4px 15px var(--ag-glass-shadow)'
             }}
         >
             {isSaving ? (

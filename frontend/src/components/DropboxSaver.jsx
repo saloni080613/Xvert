@@ -159,12 +159,12 @@ const DropboxSaver = ({ downloadUrl, filename, minimal = false }) => {
             >
                 {isSaving ? (
                     <svg width="20" height="20" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                        <circle cx="12" cy="12" r="10" fill="none" stroke="#7c4dff" strokeWidth="2" strokeDasharray="15.7 47.1">
+                        <circle cx="12" cy="12" r="10" fill="none" stroke="var(--ag-accent)" strokeWidth="2" strokeDasharray="15.7 47.1">
                           <animateTransform attributeName="transform" type="rotate" from="0 12 12" to="360 12 12" dur="1s" repeatCount="indefinite" />
                         </circle>
                     </svg>
                 ) : (
-                    <FaDropbox color="#7c4dff" size={20} />
+                    <FaDropbox color="var(--ag-accent)" size={20} />
                 )}
             </motion.div>
         );
@@ -178,9 +178,9 @@ const DropboxSaver = ({ downloadUrl, filename, minimal = false }) => {
             whileTap={!isSaving ? { scale: 0.95 } : {}}
             transition={{ type: 'spring', stiffness: 400, damping: 10 }}
             style={{
-                background: 'rgba(124, 77, 255, 0.15)',
-                color: '#7c4dff',
-                border: '1px solid rgba(124, 77, 255, 0.25)',
+                background: 'var(--ag-btn-secondary)',
+                color: 'var(--ag-btn-secondary-text)',
+                border: '1px solid var(--ag-glass-border)',
                 backdropFilter: 'blur(10px)',
                 padding: '0.8rem 1.6rem',
                 borderRadius: '50px',
@@ -193,7 +193,7 @@ const DropboxSaver = ({ downloadUrl, filename, minimal = false }) => {
                 fontSize: '0.95rem',
                 minWidth: '200px',
                 opacity: isSaving ? 0.7 : 1,
-                boxShadow: '0 4px 15px rgba(124, 77, 255, 0.08)',
+                boxShadow: '0 4px 15px var(--ag-glass-shadow)',
             }}
         >
             {isSaving ? (
@@ -207,7 +207,7 @@ const DropboxSaver = ({ downloadUrl, filename, minimal = false }) => {
                </>
             ) : (
                 <>
-                    <FaDropbox color="#7c4dff" size={20} />
+                    <FaDropbox color="currentColor" size={20} />
                     Save to Dropbox
                 </>
             )}
