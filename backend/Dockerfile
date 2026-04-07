@@ -33,13 +33,13 @@ ENV PORT=10000
 # --no-install-recommends keeps the image lean
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
-        tesseract-ocr \
-        libtesseract-dev \
-        tesseract-ocr-eng \
-        libgl1 \
-        libglib2.0-0 \
-        poppler-utils \
-        libreoffice \
+    tesseract-ocr \
+    libtesseract-dev \
+    tesseract-ocr-eng \
+    libgl1 \
+    libglib2.0-0 \
+    poppler-utils \
+    libreoffice \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
@@ -63,4 +63,4 @@ EXPOSE 10000
 # Render sets PORT automatically; we read it with the shell form so $PORT expands.
 # --workers 1  keeps memory usage low on Render's free tier.
 # Increase to 2-4 on paid plans.
-CMD uvicorn app.main:app --host 0.0.0.0 --port $PORT --workers 1
+CMD uvicorn app.main:app --host 0.0.0.0 --port $PORT --workers 2 --timeout-keep-alive 75

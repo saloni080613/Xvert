@@ -11,9 +11,11 @@ const DropboxPicker = ({ onFileSelected, acceptTypes, multiselect = false, butto
     const brandColor = '#0061FE';
 
     useEffect(() => {
-        // Attempt to initialize or re-initialize Dropbox if it failed on load (e.g. strict mode or fast refresh)
-        if (window.Dropbox && !window.Dropbox.appKey) {
-            console.warn("Dropbox script loaded but app key missing in Initialization. Ensure VITE_DROPBOX_APP_KEY is set in .env.");
+        const appKey = import.meta.env.VITE_DROPBOX_APP_KEY;
+        if (window.Dropbox && appKey) {
+            window.Dropbox.appKey = appKey;
+        } else if (!appKey) {
+            console.warn("VITE_DROPBOX_APP_KEY is not set. Dropbox Chooser will not work.");
         }
     }, []);
 

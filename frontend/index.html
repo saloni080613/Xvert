@@ -11,17 +11,8 @@
     rel="stylesheet">
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Xvert - Next Gen File Conversion</title>
-  <!-- TEMPORARY ERROR CATCHER -->
-  <script>
-    window.addEventListener('error', function(e) {
-      fetch('http://localhost:8002', {
-        method: 'POST',
-        headers: {'Content-Type': 'text/plain'},
-        body: e.error ? e.error.stack : (e.message || 'Unknown error')
-      }).catch(console.error);
-    });
-  </script>
-  <script type="text/javascript" src="https://www.dropbox.com/static/api/2/dropins.js" id="dropboxjs" data-app-key="%VITE_DROPBOX_APP_KEY%"></script>
+
+  <script type="text/javascript" src="https://www.dropbox.com/static/api/2/dropins.js" id="dropboxjs"></script>
 </head>
 
 <body>

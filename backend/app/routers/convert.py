@@ -533,6 +533,30 @@ async def get_data_formats():
     }
 # REMOTE FETCH ENDPOINTS
 # =============================================================================
+# ADD THIS BLOCK above the @router.post("/remote-fetch") decorator
+import re as _re
+
+def _transform_cloud_url(url: str) -> tuple[str, str | None]:
+    """
+    Normalize cloud share URLs to direct download URLs.
+    Returns (transformed_url, detected_filename_hint).
+    """
+    # --- Google Drive: /file/d/{id}/view → direct download ---
+    gd_match = _re.match(r'https://drive\.google\.com/file/d/([^/?]+)', url)
+    if gd_match:
+        file_id = gd_match.group(1)
+        return f'https://drive.google.com/uc?export=download&id={file_id}', None
+
+    # --- Dropbox share links: dl=0 → dl=1 ---
+    if 'dropbox.com' in url and 'dl=0' in url:
+        return url.replace('dl=0', 'dl=1'), None
+
+    # --- Dropbox share without dl param ---
+    if 'dropbox.com' in url and 'dl=' not in url:
+        sep = '&' if '?' in url else '?'
+        return url + sep + 'dl=1', None
+
+    return url, None
 
 @router.post("/remote-fetch")
 async def remote_fetch_convert(
@@ -565,9 +589,8 @@ async def remote_fetch_convert(
         raise HTTPException(status_code=400, detail="Invalid URL. Must be a valid HTTP/HTTPS URL.")
 
     try:
-        # Fetch the file from URL
-        # For Google Drive URLs, the last path segment is "view" (not a real filename),
-        # so we must rely on content-based format detection after downloading.
+        # Normalize cloud share URLs to direct download URLs
+        url, _hint = _transform_cloud_url(url)
         if 'drive.google.com' in url:
             filename = "remote_file"
         else:
@@ -576,7 +599,6 @@ async def remote_fetch_convert(
                 filename = filename.split('?')[0]
             if not filename or '.' not in filename:
                 filename = "remote_file"
-
         file = fetch_cloud_file(url, filename)
 
         # Read file contents

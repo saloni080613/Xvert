@@ -170,6 +170,31 @@ async def convert_document(
                 cv = Converter(input_path)
                 cv.convert(output_path, start=0, end=None)
                 cv.close()
+                # --- Post-process: fix common symbol substitutions from pdf2docx ---
+                try:
+                    from docx import Document as _DocxDoc
+                    _SYMBOL_FIXES = {
+                        '\u25a1': '\u2022',  # □ → •  (most common bullet garble)
+                        '\uf0b7': '\u2022',  # Private-use bullet glyph → •
+                        '\uf0a7': '\u2022',  # Another common private-use bullet
+                        '\u25cf': '\u2022',  # ● → •
+                    }
+                    _doc = _DocxDoc(output_path)
+                    _changed = False
+                    for _para in _doc.paragraphs:
+                        for _run in _para.runs:
+                            _new = _run.text
+                            for _bad, _good in _SYMBOL_FIXES.items():
+                                _new = _new.replace(_bad, _good)
+                            if _new != _run.text:
+                                _run.text = _new
+                                _changed = True
+                    if _changed:
+                        _doc.save(output_path)
+                except Exception as _fix_err:
+                    # Non-fatal: if post-processing fails, the raw pdf2docx output is still returned
+                    print(f"DEBUG: symbol fix pass failed (non-fatal): {_fix_err}", file=sys.stderr)
+
 
             # --- Word to PDF ---
             elif source_format in ["docx", "doc"] and target_format == "pdf":
