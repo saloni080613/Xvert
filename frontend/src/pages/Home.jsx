@@ -1503,14 +1503,14 @@ export default function Home() {
                                     </motion.div>
                                 )}
 
-                                {/* Advanced Settings Toggle — only for image and PDF tools with available settings */}
+                                {/* Advanced Settings Toggle — only for image tools with available settings */}
                                 {!isConverting && !isDone && (pendingFiles.length > 0 || (remoteUrl && remoteUrl.trim() !== '')) &&
                                  selectedTool?.id !== 'merge-pdf' &&
                                  selectedTool?.id !== 'compress-pdf' &&
                                  selectedTool?.id !== 'split-pdf' &&
                                  selectedTool?.id !== 'compress-image' &&
                                  selectedTool?.id !== 'scrub-data' &&
-                                 (selectedTool?.type === 'pdf' || selectedTool?.type === 'image' || selectedTool?.type === 'jpg' || selectedTool?.type === 'png' || selectedTool?.type === 'gif') && (
+                                 (selectedTool?.type === 'image' || selectedTool?.type === 'jpg' || selectedTool?.type === 'png' || selectedTool?.type === 'gif') && (
                                     <div style={{ margin: '0.5rem 0 1.5rem' }}>
                                         <motion.button
                                             onClick={() => setShowAdvanced(!showAdvanced)}
