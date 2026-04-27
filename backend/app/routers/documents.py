@@ -23,7 +23,8 @@ from app.services.conversion_history_service import (
     fail_conversion,
     increment_user_stats,
 )
-
+from typing import List, Optional
+from fastapi import File, Form, UploadFile, Request, HTTPException
 
 router = APIRouter()
 
@@ -98,14 +99,12 @@ async def convert_document_endpoint(
         if conversion_id:
             fail_conversion(conversion_id, str(e))
         raise HTTPException(status_code=500, detail=str(e))
-
-
 @router.post("/convert/merge")
 async def merge_documents_endpoint(
     request: Request,
-    files: List[UploadFile] = File([]),
-    cloud_urls: List[str] = Form([]),
-    filenames: List[str] = Form([])
+    files: Optional[List[UploadFile]] = File(None),   # <-- THE FIX
+    cloud_urls: List[str] = Form(default=[]),         # Added explicit default keyword
+    filenames: List[str] = Form(default=[])           # Added explicit default keyword
 ):
     # --- Auth (optional) ---
     user_id = await get_optional_user(request)
@@ -114,15 +113,21 @@ async def merge_documents_endpoint(
     conversion_id = None
     if user_id:
         # For merge, we use the first file's name as original
+        
+        # Calculate lengths safely since files could be None
+        files_count = len(files) if files else 0
+        urls_count = len(cloud_urls) if cloud_urls else 0
+        
         conversion_id = create_conversion_record(
             user_id=user_id,
-            original_filename=f"merge_{len(files) + len(cloud_urls)}_files",
+            original_filename=f"merge_{files_count + urls_count}_files",
             original_format="pdf",
             converted_format="pdf",
             file_size_original=0,  # We don't know total size upfront
         )
 
     try:
+        # This will now correctly evaluate to an empty list if files is None
         all_files = list(files) if files else []
         
         # Download cloud files
