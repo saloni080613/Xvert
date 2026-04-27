@@ -102,7 +102,7 @@ async def convert_document_endpoint(
 @router.post("/convert/merge")
 async def merge_documents_endpoint(
     request: Request,
-    files: Optional[List[UploadFile]] = File(None),   # <-- THE FIX
+    files: List[UploadFile] = File(default=[]),   # <-- THE FIX
     cloud_urls: List[str] = Form(default=[]),         # Added explicit default keyword
     filenames: List[str] = Form(default=[])           # Added explicit default keyword
 ):
